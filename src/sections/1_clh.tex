@@ -1,0 +1,27 @@
+\clearpage
+\section{\textlat{CLH} algoritam}
+Kod \textbf{\textlat{CLH (Craig, Landin, and Hagerste)}} algoritma postoji globalna brava postoji globalna brava \texttt{clh\_lock} koja je inicijalno kreirana kao otklju\v{c}ana. Nit koja \v{z}eli da udje u kriti\v{c}nu sekciju kreira novu \textbf{zaklju\v{c}anu} bravu i atomi\v{c}no je zamenjuje sa globalnom bravom \texttt{clh\_lock} dohvataju\'{c}i staru vrednost globalne brave u \texttt{old\_lock}. Stara vrednost globalne brave se dohvata i postavlja na novu vrednost pozivom specijalne instrukcije \texttt{get\_and\_set(x, v)}. Nit potom \v{c}eka dok stara brava (koju je neko drugi naparvio i treba da otklju\v{c}a) ne postane otklju\v{c}ana, ulazi u kriti\v{c}nu sekciju, i potom otklju\v{c}ava bravu \texttt{new\_lock}, propu\v{s}taju\'{c}i nit \v{c}ija je to brava \texttt{old\_lock}. Prva nit koja naidje \'{c}e u\'{c}i u kriti\v{c}nu sekciju dok se ostale niti blokiraju na poslednju bravu koja je zamenjena. Ovim se niti virtuelno ulan\v{c}avaju i propu\v{s}taju po onom redosledu kom su pristigle. Kao i \textlat{Ticket} i Andersonov algoritam, \textlat{CLH} algoritam garantuje ``fer'' (\textlat{FIFO}) redosled ulaska u kriti\v{c}nu sekciju.
+
+\begin{lstlisting}
+typedef bool Lock;
+
+volatile Lock *clh_lock = new Lock { false };
+
+void thread(int id)
+{
+    while (true) {
+        /* LOCK */
+        volatile Lock *new_lock = new Lock { true };
+        volatile Lock *old_lock = get_and_set(&clh_lock, new_lock);
+        while (*old_lock == true)
+            skip();
+        delete old_lock;
+        /* CRITICAL SECTION */
+        work();
+        /* UNLOCK */
+        *new_lock = false;
+        /* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

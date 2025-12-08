@@ -1,0 +1,147 @@
+\section{Uvod}
+\textbf{\v{S}ta su niti?}\\
+\textbf{Niti} (eng. \textlat{Threads}) su mehanizam koji omogu\'{c}ava konkurentno ili paralelno izvr\v{s}avanje nekih delova koda programa.\\\\
+\textbf{Konkurentno izvr\v{s}avanje} podrazumeva jednu izvr\v{s}nu jedinicu (jezgro ili procesor) koju niti vremenski dele (t.j. izv\v{s}avaju se po principu "\v{c}as jedna, \v{c}as druga, ..."). \\\\
+\textbf{Paralelno izvr\v{s}avanje} podrazumeva vi\v{s}e izvr\v{s}nih jedinica (jezgara ili procesora) gde se niti fizi\v{c}ki izvr\v{s}avaju u isto vreme. Na kom jezgru ili procesoru \'{c}e se odredjena nit izvr\v{s}avati i koliko jedinica vremena odlu\v{c}uje \texttt{scheduler} operativnog sistema (\textlat{preemptive multitasking}). Ukoliko ne postoji \texttt{scheduler} ve\'{c} niti same odlu\v{c}uju koja \'{c}e se izvr\v{s}avati slede\'{c}e (\textlat{cooperative multitasking}) takve niti se nazivaju \textbf{korutinama} (eng. \textlat{Coroutines}).
+
+Primer kreiranja dve \textlat{POSIX} niti gde jedna nit ispisuje crveno slovo ``\textlat{\color{red}A}'' dok druga ispisuje zeleno slovo ``\textlat{\color{OliveGreen}B}'':
+\begin{lstlisting}
+// Compile and run: gcc -pthread main.c && ./a.out
+#include <stdio.h>
+#include <pthread.h>
+#define RED "\x1b[31m"
+#define GREEN "\x1b[32m"
+#define NOCOLOR "\x1b[0m"
+
+void *a(void *data) {
+	for ( ; ; ) {
+		printf(RED "A" NOCOLOR);
+	}
+}
+void *b(void *data) {
+	for ( ; ; ) {
+		printf(GREEN "B" NOCOLOR);
+	}
+}
+int main() {
+	pthread_t ta, tb;
+	pthread_create(&ta, NULL, a, NULL);
+	pthread_create(&tb, NULL, b, NULL);	
+	pthread_join(ta, NULL);
+	pthread_join(tb, NULL);
+	return 0;
+}
+\end{lstlisting}
+\textbf{\v{S}ta je atomi\v{c}nost?}\\
+Izraz (t.j. niz operacija) je atomi\v{c}an ukoliko se izvr\v{s}avanje operacija ne mo\v{z}e prekinuti na pola puta t.j. ili se sve operacije izvr\v{s}e odjednom, ili se ne izvr\v{s}i ni jedna.
+\\\\
+\textbf{\v{S}ta je kriti\v{c}na referenca?}\\
+U nekom izrazu koji jedna nit izvr\v{s}ava, \textbf{kriti\v{c}na referenca} je referenca na promenljivu u izrazu \v{c}ija se vrednost menja od strane neke druge niti.
+\\\\
+\textbf{\v{S}ta je \textlat{At-Most-Once Property (AMOP)}?}\\
+Iskaz dodele vrednosti $x=e$ zadovoljava \textbf{\latin At-Most-Once Property} ukoliko je jedna od slede\'{c}e dve stavke ta\v{c}na:
+\begin{enumerate}
+    \item Izraz $e$ sadr\v{z}i \textbf{najvi\v{s}e jednu} kriti\v{c}nu referencu, i $x$ se ne \v{c}ita od strane drugih niti.
+    \item Izraz $e$ ne sadr\v{z}i \textbf{ni jednu} kriti\v{c}nu referencu, a $x$ se mo\v{z}e \v{c}itati od strane drugih niti. 
+\end{enumerate}
+Ukoliko dodela vrednosti zadovoljava \textlat{AMOP}, u pogledu svih niti \'{c}e izgledati kao da se dodela izvr\v{s}ava atomi\v{c}no.
+\\\\
+U slede\'{c}em primeru, obe dodele vrednosti $x=e_1$ i $y=e_2$ \textbf{zadovoljavaju} \textlat{AMOP} jer $e_1$ i $e_2$ ne sadr\v{z}e ni jednu kriti\v{c}nu referencu (zadovoljavaju stavku 2):
+\begin{lstlisting}
+int x = 0, y = 0;
+void a() {
+    x = x + 1;
+}
+void b() {
+    y = y + 1;
+}
+\end{lstlisting}
+U slede\'{c}em primeru, obe dodele vrednosti $x=e_1$ i $y=e_2$ \textbf{zadovoljavaju} \textlat{AMOP}. U $x=e_1$, $e_1$ sadr\v{z}i kriti\v{c}nu referencu na $y$, ali se $x$ ne \v{c}ita od strane drugih niti (zadovoljava stavku 1). U $x=e_2$, $e_2$ ne sadr\v{z}i ni jednu kriti\v{c}nu referencu (zadovoljava stavku 2).
+\begin{lstlisting}
+int x = 0, y = 0;
+void a() {
+    x = y + 1;
+}
+void b() {
+    y = y + 1;
+}
+\end{lstlisting}
+U slede\'{c}em primeru, $x=e_1$ i $y=e_2$ \textbf{ne zadovoljavaju} \textlat{AMOP}. U $x = e_1$, $e_1$ sadr\v{z}i kriti\v{c}nu referencu na $y$, ali $x$ se \v{c}ita od strane niti \texttt{b()} (ne zadovoljava stavku 2.). U $y = e_2$, $e_2$ sadr\v{z}i kriti\v{c}nu referencu na $x$, ali $y$ se \v{c}ita od strane niti \texttt{a()} (ne zadovoljava stavku 2.).
+\begin{lstlisting}
+int x = 0, y = 0;
+void a() {
+    x = y + 1;
+}
+void b() {
+    y = x + 1;
+}
+\end{lstlisting}
+\textbf{\v{S}ta je kriti\v{c}na sekcija?}\\
+Kriti\v{c}na sekcija je deo koda koji samo jedna nit sme da izvr\v{s}ava u nekom trenutku i mo\v{z}e se implementirati pomo\'{c}u \texttt{mutual exclusion lock}-a (\texttt{mutex}-a).
+\\\\
+\textbf{\v{S}ta je \textlat{lock}?}\\
+Brava (eng. \textlat{Lock}) je mehanizam koji omogu\'{c}ava nekoj niti da ograni\v{c}i pristup nekom delu koda ili resursu ostalim nitima. Na primer, nit mo\v{z}e zaklju\v{c}ati fajl sa eksluzivnim pravom pristupa za upis u fajl (\texttt{exclusive lock}), ili sa deljenim pravom pristupa  za \v{c}itanje iz fajla (\texttt{shared lock}).
+\\\\
+\textbf{\v{S}ta je \textlat{spinlock}?}\\
+\textlat{Spinlock} je brava implementirana pomo\'{c}u uposlenog \v{c}ekanja t.j. petlje koje ne radi ni\v{s}ta.
+\begin{lstlisting}
+while (lock)
+    skip();
+\end{lstlisting}
+\textbf{\v{S}ta je \textlat{deadlock (livelock)}?}\\
+Dve ili vi\v{s}e niti se mogu na\'{c}i u \textlat{deadlock}-u ukoliko blokiraju jedna druge tako da ni jedna ne mo\v{z}e da nastavi sa izvr\v{s}avanjem. \textlat{Livelock} je sli\v{c}an \textlat{deadlock}-u s tim \v{s}to niti stalno menjaju ustupaju prednost nekoj drugoj niti i na taj na\v{c}in tako\dj{}e ni jedna nit ne nastavlja sa izvr\v{s}avanjem.
+\\\\
+\textbf{\v{S}ta je izgladnjivanje (\textlat{starvation})?}\\
+Izgladnjivanje niti se javlja kada nit predugo \v{c}eka na nekom uslovu. Na primer, kod \textlat{Readers/Writers} problema se mo\v{z}e javiti izgladnjivanje pisaca ukoliko \v{c}itaoci stalno nadolaze.
+\\\\
+\textbf{\v{S}ta je \texttt{volatile}?}\\
+\texttt{volatile} je klju\v{c}na re\v{c} u jezicima \textlat{C} i \textlat{C++} koja nagove\v{s}tava prevodiocu da ne pravi optimizacije sa objektnom nazna\v{c}enom sa \texttt{volatile}.
+Na primer, ukoliko \v{z}elimo da radimo uposleno \v{c}ekanje tako \v{s}to \'{c}emo imati jednu \texttt{for} petlju koja ne radi ni\v{s}ta:
+\begin{lstlisting}
+// gcc -masm=intel -S -O2 main.c && cat ./main.s
+int main() {
+    /* volatile */ int i;
+    for (i = 0; i < 100000; i++);
+    return 0;
+}
+\end{lstlisting}
+Prevodilac \'{c}e optimizovati kod tako \v{s}to uop\v{s}te ne\'{c}e generisati kod za petlju:
+\begin{lstlisting}[language=]
+        .globl  main
+        .type   main, @function
+main:
+        xor     eax, eax
+        ret
+\end{lstlisting}
+Dok ukoliko otkomentari\v{s}emo \texttt{volatile}, kod za petlju se generi\v{s}e:
+\begin{lstlisting}[language=]
+        .globl  main
+        .type   main, @function
+main:
+        mov     DWORD PTR -4[rsp], 0
+        mov     eax, DWORD PTR -4[rsp]
+        cmp     eax, 99999
+        jg      .L2
+        .p2align 4,,10
+        .p2align 3
+.L3:
+        mov     eax, DWORD PTR -4[rsp]
+        add     eax, 1
+        mov     DWORD PTR -4[rsp], eax
+        mov     eax, DWORD PTR -4[rsp]
+        cmp     eax, 99999
+        jle     .L3
+.L2:
+        xor     eax, eax
+        ret
+\end{lstlisting}
+Pravilo je da sve deljene promenljive treba ozna\v{c}iti sa modifikatorom \texttt{volatile}. 
+\\\\
+\textbf{Napomena:} U jeziku \textlat{C++} \textbf{nije dovoljno} koristiti \texttt{volatile} za korektnu sinhronizaciju pomo\'{c}u \textlat{spinlock}-a ve\'{c} za implementaciju neophodno koristiti konstrukte iz zaglavlja \texttt{<atomic>}, tako da sve kodove navedene u nastavku treba razumeti samo kao pseudo kod.
+\\\\
+\textbf{\v{S}ta je \texttt{skip()}?}\\
+Pozviom \texttt{skip()}, nit se odri\v{c}e procesorskog vremena. Radi optimizacije, \texttt{skip()} je potrebno pozvati prilikom uposlenog \v{c}ekanja ukoliko uslov nije ispunjen. 
+\\\\
+Na primer, ukoliko je \texttt{scheduler} dodelio procesor nekoj niti u vremenu od $150\ \mathrm{ms}$, a ona ustanovi u roku od $7\ \mu s$ da uslov za nastavak nije ispunjen, nema potrebe da se nit vrti u petlji narednih $149,993\ \mathrm{ms}$ ukoliko postoj neka druga nit koja bi se mogla izvr\v{s}avati.
+\\\\
+\texttt{skip()} je mogu\'{c}e implementirati kao \texttt{sched\_yield()} ili \texttt{usleep(0)}.

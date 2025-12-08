@@ -1,0 +1,41 @@
+\section{Uvod}
+\textbf{\v{S}ta je uslovni kriti\v{c}ni region?}\\
+Uslovni kriti\v{c}ni regioni pru\v{z}aju mogu\'{c}nost za medjusobno isklju\v{c}ivanje izmedju niti kori\v{s}\'{c}enjem iskaza \texttt{region (s) \{...\}} , kao i mogu\'{c}nost da nit unutar regiona privremeno napusti kriti\v{c}ni region dok se ne ispuni neki neophodan uslov pomo\'{c}u \texttt{await(...)} iskaza.
+\\\\
+Kriti\v{c}ni regioni su vezani za neku strukturu $s$  nad kojom mo\v{z}e da se pozove \texttt{region (s) \{ ... \}} iskaz. To je ovoj skripti bilo koja struktura koja subklasira virtuelnu klasu \texttt{Region}. Unutar sebe, struktura \texttt{Region} sadr\v{z}i \textlat{mutex} koji se zaklju\v{c}ava prilikom svakog ulaska u region i otklju\v{c}ava prilikom svakog izlaska iz regiona.
+\\\\
+Nakon subklasiranja strukture \texttt{Region}, u strukturi se mogu dodati dodatni podaci \v{c}ije vrednosti, po pravilu, \textbf{nije dozvoljeno} \v{c}itati ili modifikovati van regionskog iskaza. Takodje, nije smisleno pozivati \texttt{await(...)} van regionskog iskaza.
+\\\\
+U jeziku Java, \texttt{synchronized (this) \{...\}}  predstavlja primer regiona nad objektrom \texttt{this}. Iskaz \texttt{await(...)} se mo\v{z}e implementirati kao \texttt{while (! ...)} petlja koja poziva \texttt{Object.wait()}. Ukoliko uslov postane ispunjen, nekako se mora pozvati \texttt{notify()} \v{s}to mo\v{z}e uraditi npr. nit koja uspe\v{s}no izlazi iz regionskog bloka.
+\begin{lstlisting}
+// region (lock) {
+//     ...
+//     await(condition)
+//     ...
+// }
+synchronized(lock) { // enter region
+    ...
+    while (! condition) // await(condition)
+        lock.wait();
+    ...
+    lock.notifyAll(); // make awaited threads wake up recheck their condition
+} // exit region
+\end{lstlisting}
+A slede\'{c}i kod je primer implementacije regiona pomo\'{c}u \textlat{POSIX} niti:
+\begin{lstlisting}
+pthread_mutex_t m_mutex;
+pthread_cond_t m_cond;
+pthread_mutex_init(&m_mutex, NULL);
+pthread_cond_init(&m_cond, NULL)
+...
+pthread_mutex_lock(&m_mutex); // enter region
+...
+while (! condition) // await(condition)
+    pthread_cond_wait(&m_cond, &m_mutex); 
+...
+pthread_cond_broadcast(&m_cond); // make awaited threads wake up recheck their condition
+pthread_mutex_unlock(&m_mutex); // exit region
+...
+pthread_cond_destroy(&m_cond);
+pthread_mutex_destroy(&m_mutex);
+\end{lstlisting}

@@ -1,0 +1,21 @@
+\clearpage
+\section{\textlat{Test-and-set} algoritam}
+Kod \textbf{\textlat{Test-and-set}} algoritma postoji globalna brava \texttt{lock} koja je inicijalno kreirana kao otklju\v{c}ana (\texttt{false}). Nit koja \v{z}eli da udje u kriti\v{c}nu sekciju atomi\v{c}no zaklju\v{c}ava globalnu bravu i dohvata staru vrednost brave. Atomi\v{c}no dohvatanje stare vrednosti globlane i postavljanje na vrednost ``zaklju\v{c}ano'' (\texttt{true}) se vr\v{s}i pozivom specijalne instrukcije \texttt{test\_and\_set(v)}. Ukoliko je stara vrednost brave bila ``otklju\v{c}ano'', uposleno \v{c}ekanje se prekida ulazi se u kriti\v{c}nu sekciju, s tim \v{s}to je vrednost brave sada postavljena na ``zaklju\v{c}ano''. Ukoliko je stara vrednost bila ``zaklju\v{c}ano'', u bravu se opet upisuje vrednost ``zaklju\v{c}ano'' i uposleno \v{c}ekanje se nastavlja. Stalni ponovni upis vrednosti \texttt{true} u promenljivu \texttt{lock} usporava rad sistema, jer vr\v{s}i \v{c}estu invalidaciju ke\v{s}irane vrednosti \texttt{lock} i \v{c}esto zaklju\v{c}avanje \texttt{cache} linije za upis. Ovaj problem re\v{s}ava slede\'{c}i algoritam, \textbf{\textlat{Test-and-test-and-set}}. Kada nit u kriti\v{c}noj sekciji zavr\v{s}i sa kriti\v{c}nom sekcijom, vrednost globalne brave postavlja na ``otklju\v{c}ano''.
+\begin{lstlisting}
+volatile bool lock = false;
+
+void thread(int id)
+{
+    while (true) {
+		/* LOCK */
+        while (test_and_set(&lock))
+            skip();
+		/* CRITICAL SECTION */
+		work();
+		/* UNLOCK */
+		lock = false;
+		/* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

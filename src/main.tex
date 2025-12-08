@@ -1,0 +1,153 @@
+% !TeX program = lualatex
+% (c) Ivan Janevski
+\documentclass{report}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[serbian]{babel}
+\usepackage{tikz}
+\usepackage{wrapfig}
+\usepackage{eso-pic}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{courier}
+\usetikzlibrary{arrows.meta,graphs,graphdrawing}
+\usegdlibrary{circular}
+\usepackage{subcaption}
+
+%
+% You may choose latin or cyrillic font by uncommenting one of
+% the following sections, while leaving the other one commented
+%
+% ------ Use cyrillic -------
+%\usepackage{cmsrb}
+%\usepackage[T1,OT2]{fontenc}
+%\newcommand\textcyr[1]{{\fontencoding{OT2}\fontfamily{wncyr}\selectfont #1}}
+%\newcommand\textlat[1]{{\fontencoding{T1}\selectfont #1}}
+%\newcommand\cyrillic{\fontencoding{OT2}\fontfamily{wncyr}\selectfont}
+%\newcommand\latin{\fontencoding{T1}\selectfont}
+%\newenvironment{nocyrillic}{\fontencoding{T1}\selectfont}{\fontencoding{OT2}\fontfamily{wncyr}\selectfont}
+% ------- Use latin ---------
+\usepackage[T1]{fontenc}
+\newcommand\textcyr[1]{{#1}}
+\newcommand\textlat[1]{{#1}}
+\newcommand\cyrillic{}
+\newcommand\latin{}
+\newenvironment{nocyrillic}{}{}
+% --------- END  ---------
+
+\definecolor{kdp-background}{RGB}{250, 250, 250}
+\definecolor{kdp-preprocess}{RGB}{128, 64, 0}
+\definecolor{kdp-comment}{RGB}{128, 128, 128}
+\definecolor{kdp-numbers}{RGB}{128, 128, 128}
+\definecolor{kdp-string}{rgb}{0.58,0,0.82}
+\definecolor{kdp-keyword}{RGB}{0, 0, 255}
+\definecolor{kdp-special}{RGB}{220, 100, 40}
+%\definecolor{kdp-special}{RGB}{200, 0, 0}
+\lstdefinestyle{kdp-style}{
+    language=C++,
+    %backgroundcolor=\color{kdp-background},
+    commentstyle=\color{kdp-comment},
+    morecomment=[l][\color{kdp-preprocess}]{\#},
+    keywordstyle=\color{kdp-keyword},
+    keywordstyle=[2]\bfseries\color{kdp-special},
+    numberstyle=\tiny\color{kdp-numbers},
+    stringstyle=\color{kdp-string},
+    %basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=none,                    
+    numbersep=8pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=4,
+    %frame=single,
+    morekeywords={synchronized},
+    morekeywords=[2]{fetch_and_add, get_and_set, test_and_set, signal, wait, region, await, cond, signalAll, signal_all, monitor, in, inp, rd, rdp, out, eval, mbx_put, mbx_get},
+    columns=fixed 
+}
+\lstset{basicstyle=\fontencoding{T1}\selectfont\ttfamily\footnotesize,breaklines=true}
+\lstset{style=kdp-style}
+\renewcommand\texttt[1]{{\fontencoding{T1}\selectfont\ttfamily #1}}
+\titleformat{\section}[display]{\normalfont\bfseries}{}{0pt}{\Large\thesection\;}
+\title{Konkurentno i distribuirano programiranje - skripta za kolokvijumski deo}
+\author{Ivan Janevski}
+\date{}
+\newcommand\bground{%
+    \put(0,0){%
+    \parbox[b][\paperheight]{\paperwidth}{%
+    \vfill
+    \centering
+    \includegraphics[width=\paperwidth,height=\paperheight]{assets/cover.png}%
+    \vfill
+}}}
+\begin{document}
+\AddToShipoutPicture*{\bground}
+\maketitle
+\newpage
+\hspace{0pt}
+\vfill
+\begin{center}
+Ova skripta je otvorenog koda (\textlat{GNU Free Documentation License}) \v{c}iji se izvori\v{s}ni kod napisan u \textlat{LaTeX}-u mo\v{z}e na\'{c}i na slede\'{c}em linku
+\\
+\textlat{\url{https://github.com/yanevskiv/notes/tree/master/2022/kdp}}
+\end{center}
+\vfill
+\hspace{0pt}
+\newpage
+\renewcommand\contentsname{\cyrillic Sadr\v{z}aj}
+\tableofcontents{}
+\clearpage
+
+\titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Huge\thechapter\;}
+\chapter{\textlat{Spinlock} algoritmi}
+\input{sections/1_uvod.tex}
+\input{sections/1_test_and_set.tex}
+\input{sections/1_test_and_test_and_set.tex}
+\input{sections/1_peterson_N.tex}
+\input{sections/1_ticket.tex}
+\input{sections/1_anderson.tex}
+\input{sections/1_bakery.tex}
+\input{sections/1_clh.tex}
+
+\chapter{Semafori}
+\input{sections/2_uvod.tex}
+\input{sections/2_synchro.tex}
+\input{sections/2_mutex.tex}
+\input{sections/2_producer_consumer.tex}
+\input{sections/2_barrier.tex}
+\input{sections/2_sjn.tex}
+\input{sections/2_sleeping_barber.tex}
+\input{sections/2_readers_writers.tex}
+\input{sections/2_cigarette_smokers.tex}
+\input{sections/2_philosophers.tex}
+
+\chapter{Regioni}
+\input{sections/3_uvod.tex}
+\input{sections/3_synchro.tex}
+\input{sections/3_mutex.tex}
+\input{sections/3_producer_consumer.tex}
+\input{sections/3_barrier.tex}
+\input{sections/3_sjn.tex}
+\input{sections/3_sleeping_barber.tex}
+\input{sections/3_readers_writers.tex}
+\input{sections/3_cigarette_smokers.tex}
+\input{sections/3_philosophers.tex}
+
+\chapter{Monitori}
+\input{sections/4_uvod.tex}
+\input{sections/4_synchro.tex}
+\input{sections/4_mutex.tex}
+\input{sections/4_producer_consumer.tex}
+\input{sections/4_barrier.tex}
+\input{sections/4_sjn.tex}
+\input{sections/4_sleeping_barber.tex}
+\input{sections/4_readers_writers.tex}
+\input{sections/4_cigarette_smokers.tex}
+\input{sections/4_philosophers.tex}
+
+\end{document}

@@ -1,0 +1,61 @@
+\clearpage
+\section{\latin Mutual exclusion}
+\textbf{\large Zadatak} Proces je pokrenuo dve niti, gde prva nit popunjava deljeni niz znakova znakom `\textlat{a}', dok druga nit popunjava niz znakova znakom `\textlat{b}'. Ove dve niti remete rad jedna drugoj, time \v{s}to se utrkuju (\textlat{race condition}) i ``gaze'' podatke druge niti svojim podacima. Koriste\'{c}i semafore, potrebno je za\v{s}titi niz znakova tako da jedna nit ne mo\v{z}e da zapo\v{c}ne upis dok druga nit ne potpuno zavr\v{s}i.
+\\\\
+\textbf{\v{S}ta je \textlat{mutex}?}
+\\
+\textlat{Mutex} je resurs koji samo jedna nit mo\v{z}e da ``dr\v{z}i'' u nekom trenutku. Kada neka nit ``uzme'' \textlat{mutex} (``zaklju\v{c}a'' ga) sve ostale niti koje poku\v{s}aju isto \'{c}e se blokirati dok nit koja dr\v{z}i \textlat{mutex} ne vrati (``otklju\v{c}a'') isti. \textlat{Mutex} slu\v{z}i za implementaciju \textbf{kriti\v{c}ne sekcije} u kodu. Kriti\v{c}na sekcija je deo koda koji isklju\v{c}ivo jedna nit mo\v{z}e da izvr\v{s}ava u nekom trenutku. Primer kori\v{s}\'{c}enja \textlat{mutex}-a pomo\'{c}u \textlat{POSIX} niti:
+\begin{lstlisting}
+pthread_mutex_t mutex;
+pthread_mutex_init(&mutex);
+...
+pthread_mutex_lock(&mutex);
+// CRITICAL SECTION
+pthread_mutex_unlock(&mutex);
+...
+pthread_mutex_destroy(&mutex);
+\end{lstlisting}
+\textlat{Mutex} se lako implementira pomo\'{c}u binarnog semafora (semafori nisu jedini na\v{c}in da se napravi \textlat{mutex}!). Vrednost semafora u svrsi \textlat{mutex}-a se inicijalizira na vrednost \texttt{s=1}, a potom \texttt{wait(s)} ozna\v{c}ava ``zauze\'{c}e'' \textlat{mutex}-a, dok \texttt{signal(s)} ozna\v{c}ava ``osloba\dj{}anje'' istog.  npr. pomo\'{c}u \textlat{POSIX} semafora:
+\begin{lstlisting}
+sem_t mutex;
+sem_init(&mutex, 0, 1); // init semaphore with value 1
+...
+sem_wait(&mutex); // lock
+// CRITICAL SECTION
+sem_post(&mutex); // unlock
+...
+sem_destroy(&mutex);
+\end{lstlisting}
+\textbf{\large Re\v{s}enje}
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+Sem mutex = 1;
+char buffer[BUFSIZ];
+
+void a() {
+    while (true) {
+        wait(mutex);
+		memset(buffer, 'a', BUFSIZ);
+		signal(mutex);
+        usleep(50);
+    }
+}
+
+void b() {
+    while (true) {
+        wait(mutex);
+		memset(buffer, 'b', BUFSIZ)
+		signal(mutex);
+        usleep(50);
+    }
+}
+
+int main() {
+    Thread ta = createThread(a);
+    Thread tb = createThread(b);
+    join(ta);
+    join(tb);
+    return 0;
+}
+\end{lstlisting}

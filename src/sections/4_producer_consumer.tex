@@ -1,0 +1,141 @@
+\clearpage
+\section{\latin Producer and consumer}
+\textbf{\large Zadatak}. Proces ima jedan deljeni ograni\v{c}en kru\v{z}ni bafer veli\v{c}ine $B$ i pokrenuo je dve niti: jednu nit \texttt{producer()} koja kreira podatke i sme\v{s}ta ih u bafer, i jednu nit \texttt{consumer()} koja dohvata podatke iz bafera i koristi ih. Ukoliko \texttt{producer} radi br\v{z}e od \texttt{consumer}-a, nastupi\'{c}e prekora\v{c}enje bafera (\textlat{buffer overflow}), dok ukoliko \texttt{consumer} radi br\v{z}e od \texttt{producer}-a, \texttt{consumer} \'{c}e po\v{c}eti da dohvata nevalidne ili nepostoja\'{c}e podatke. Koriste\'{c}i monitore, potrebno je obezbediti da se ove ne\v{z}eljene situacije ne de\v{s}avaju.
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <stdlib.h>
+#include <monitor.h>
+#define B 10
+
+class Buffer_Monitor : SW_Monitor {
+    int m_data[B];
+    int m_head = 0;
+    int m_tail = 0;
+    int m_count = 0;
+    cond m_full;
+    cond m_empty;
+public:
+    Buffer_Monitor () : m_full(this), m_empty(this) {
+        // empty
+    }
+    void put_data(int data) {
+        monitor {
+            if (m_count == B)
+                m_full.wait();
+            m_data[m_head] = data;
+            m_head = (m_head + 1) % B;
+            m_count += 1;
+            m_empty.signal();
+        }
+    }
+    int get_data() {
+        monitor {
+            if (m_count == 0)
+                m_empty.wait();
+            int result = m_data[m_tail];
+            m_tail = (m_tail + 1) % B;
+            m_count -= 1;
+            m_full.signal();
+            return result;
+        }
+    }
+} buffer;
+
+void producer() {
+    while (true) {
+        // Produce data ...
+        int data = rand() % 1000;
+        // Put data into buffer
+        buffer.put_data(data);
+    }
+}
+
+void consumer() {
+    while (true) {
+        // Get data from buffer
+        int data = buffer.get_data();
+        // Consume data ...
+        print("%d ", data);
+    }
+}
+
+int main() {
+    Thread tp = createThread(producer);
+    Thread tc = createThread(consumer);
+    join(tp);
+    join(tc);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <stdlib.h>
+#include <monitor.h>
+#define B 10
+
+class Buffer_Monitor : SC_Monitor {
+    int m_data[B];
+    int m_head = 0;
+    int m_tail = 0;
+    int m_count = 0;
+    cond m_full;
+    cond m_empty;
+public:
+    Buffer_Monitor () : m_full(this), m_empty(this) {
+        // empty
+    }
+    void put_data(int data) {
+        monitor {
+            while (m_count == B)
+                m_full.wait();
+            m_data[m_head] = data;
+            m_head = (m_head + 1) % B;
+            m_count += 1;
+            m_empty.signal();
+        }
+    }
+    int get_data() {
+        monitor {
+            while (m_count == 0)
+                m_empty.wait();
+            int result = m_data[m_tail];
+            m_tail = (m_tail + 1) % B;
+            m_count -= 1;
+            m_full.signal();
+            return result;
+        }
+    }
+} buffer;
+
+
+void producer() {
+    while (true) {
+        // Produce data ...
+        int data = rand() % 1000;
+        // Put data into buffer
+        buffer.put_data(data);
+    }
+}
+
+void consumer() {
+    while (true) {
+        // Get data from buffer
+        int data = buffer.get_data();
+        // Consume data ...
+        print("%d ", data);
+    }
+}
+
+int main() {
+    Thread tp = createThread(producer);
+    Thread tc = createThread(consumer);
+    join(tp);
+    join(tc);
+    return 0;
+}
+
+\end{lstlisting}

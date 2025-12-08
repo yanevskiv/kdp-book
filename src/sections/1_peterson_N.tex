@@ -1,0 +1,30 @@
+\clearpage
+\section{Pitersonov (\textlat{Tie-Breaker}) algoritam za \textlat{N} procesa}
+Kod \textbf{Pitersonovog (\textlat{Tie-Breaker}) algoritma za $N$ procesa}, nit koja \v{z}eli da udje u kriti\v{c}nu sekciju najpre mora da prodje kroz $N - 1$ nivoa. Nit ostaje blokirana u nivou ukoliko postoji neka nit koja je u jednakom ili vi\v{s}em nivou (\texttt{inNivo[pId] >= inNivo[id]}) i ukoliko je data nit poslednja koja je u\v{s}la u dati nivo (\texttt{lastId[nivo] == id}). Niti se polako ``filtriraju'' tako \v{s}to u svakom nivou jedna nit koja se utrkuje mora da ostane ``zarobljena'' u tom nivou. Tako se u prvom nivou se mo\v{z}e na\'{c}i najvi\v{s}e $N$ niti, u drugom nivou mo\v{z}e se na\'{c}i najvi\v{s}e $N-1$ niti, u tre\'{c}em nivou se mo\v{z}e na\'{c}i najvi\v{s}e $N-2$ niti, itd. U poslednjem nivou se mo\v{z}e na\'{c}i samo jedna nit i ona ulazi u kriti\v{c}nu sekciju. Kada nit zavr\v{s}i sa kriti\v{c}nom sekcijom, nivo date niti se resetuje na 0.
+\begin{lstlisting}
+volatile int inNivo[N] = { 0 }; // inNivo[processId] = nivo
+volatile int lastId[N] = { 0 }; // lastId[nivo] = processId
+
+void thread(int id)
+{
+    while (true) {
+		/* LOCK */
+        for (int nivo = 0; nivo < N - 1; nivo++) {
+            inNivo[id] = nivo;
+            lastId[nivo] = id;
+            for (int pId = 0; pId < N; pId++) {
+                if (pId == id)
+                    continue;
+                while (inNivo[pId] >= inNivo[id] && lastId[nivo] == id) 
+                    skip();
+            }
+        }
+		/* CRITICAL SECTION */
+        work();
+		/* UNLOCK */
+        inNivo[id] = 0;
+		/* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

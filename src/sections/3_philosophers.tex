@@ -1,0 +1,46 @@
+\clearpage
+\section{\latin Dining philosophers}
+\textbf{\large Zadatak} Proces je pokrenuo 5 niti koje simuliraju pona\v{s}anje filozofa za stolom. Filozof neko vreme misli, uzima levu i desnu vilju\v{s}ku na stolu, jede ru\v{c}ak na tanjiru, vra\'{c}a vilju\v{s}ke, i nastavlja da misli. Filozof ne mo\v{z}e da uzme levu vilju\v{s}ku ukoliko ju je trenutno filozof levo koristi, i sli\v{c}no ne mo{z}e da uzme desnu vilju\v{s}ku ukoliko ju je trenutno filozof desno koristi. Ukoliko svih pet filozofa u isto vreme poku\v{s}aju da uzmu levu vilju\v{s}ku, ni jedan filozof ne\'{c}e mo\'{c}i da uzme desnu vilju\v{s}ku, i tada nastupa deadlock. Implementirati pona\v{s}anje filozofa pomo\'{c}u uslovnih kriti\v{c}nih regiona tako da se ovaj deadlock ne mo\v{z}e dogoditi.
+\\\\
+\textbf{\large Re\v{s}enje}\\
+Najprirodnije re\v{s}enje filozofa sa uslovnim kriti\v{c}nim regionima jeste atomi\v{c}no uzeti obe vilju\v{s}ke kada obe vilju\v{s}ke postanu slobodne. 
+\begin{lstlisting}
+#include <thread.h>
+#include <region.h>
+#define N 5
+
+struct Table : Region {
+    bool fork[N] = { false };
+} t;
+
+void phil(int id) {
+    int left = id == 0 ? N - 1 : id - 1;
+    int right = (id + 1) % N;
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        region (t) {
+            await(t.fork[left] == false && t.fork[right] == false);
+            t.fork[left] = true;
+            t.fork[right] = true;
+        }
+        // Eat
+		eat();
+        // Release forks
+        region (t) {
+            t.fork[left] = false;
+            t.fork[right] = false;
+        }
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+\end{lstlisting}

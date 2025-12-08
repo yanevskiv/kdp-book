@@ -1,0 +1,55 @@
+\clearpage
+\section{\latin Sleeping barber}
+\textbf{\large Zadatak} Proces je pokrenuo jednu nit koja simulira pona\v{s}anje uspavanog berberina i $N$ niti koje simuliraju pona\v{s}anje mu\v{s}terija koje dolaze kod berberina da se \v{s}i\v{s}aju. Berberin spava dok mu ne dodje mu\v{s}terija u berbernicu. Mu\v{s}terija kada dodje u berbernicu treba da probudi berberina i sedne u red \v{c}ekanja dok je berberin ne pozove na \v{s}i\v{s}anje. Kada berberin zavr\v{s}i sa \v{s}i\v{s}anjem mu\v{s}terije, mu\v{s}terja pla\'{c}a berberinu i odlazi. Ukoliko u berbernici nema mesta za sedenje, mu\v{s}terija odlazi i vra\'{c}a se nakon nekog vremena. Pomo\'{c}u semafora implementirati metode \texttt{void barber()} i \texttt{void customer(int id)} koje respektivno opona\v{s}aju berberina i mu\v{s}terije.
+\\\\
+\textbf{\large Re\v{s}enje}
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <queue>
+#define MAX_SEATS 5
+#define N 10
+Sem privb = 0; // privatni semafor berberina
+Sem privc[N];  // privatni semafori musterija
+Sem mutex = 1; // mutex koji stiti qSeats
+std::queue<int> qSeats;
+extern void cut_hair(int custId);
+
+void barber() {
+    while (true) {
+        wait(privb);
+        wait(mutex);
+        int custId = qSeats.front();
+        qSeats.pop();
+        signal(mutex);
+        signal(privc[custId]);
+        cut_hair(custId);
+    }
+}
+void customer(int id) {
+    while (true) {
+        wait(mutex);
+        if (qSeats.size() < MAX_SEATS)  {
+            qSeats.push(id);
+            signal(mutex);
+            wait(privc[id]);
+            cut_hair(id);
+        } else {
+            signal(mutex);
+        }
+        usleep(100);
+    }
+}
+int main() {
+    for (int i = 0; i < N; i++) 
+        init(privc[i], 0);
+    Thread tb = createThread(barber);
+    Thread tc[N];
+    for (int i = 0; i < N; i++) 
+        tc[i] = createThread(customer, i);
+    join(tb);
+    join(tb);
+    return 0;
+}
+
+\end{lstlisting}

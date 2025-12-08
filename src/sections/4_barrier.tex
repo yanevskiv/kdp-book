@@ -1,0 +1,114 @@
+\clearpage
+\section{\latin Barrier synchronization}
+\textbf{\large Zadatak} Proces je pokrenuo $N$ niti koje treba da zajedni\v{c}ki odrade neki posao \texttt{work1()}, i treba predju na posao \texttt{work2()} tek kada svih $N$ niti zavr\v{s}e posao \texttt{work1()}. Sli\v{c}no, potrebno je da svih $N$ zavr\v{s}e posao \texttt{work2()} pre nego \v{s}to se predje nazad na posao \texttt{work1()}. Poslovi se moraju obavljati sa ekskluzivnim pravom pristupa. Implementirati ovakvo pona\v{s}anje niti pomo\'{c}u monitora.
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <stdlib.h>
+#include <monitor.h>
+#define N 5
+class CriticalSection;
+class CS : public CriticalSection {
+    ...
+} cs;
+
+class Barrier : SW_Monitor {
+    int m_count = 0;
+    cond m_barrier;
+public:
+    Barrier() : m_barrier(this) {
+        // empty
+    }
+    void wait_barrier() {
+        monitor {
+            m_count += 1;
+            if (m_count == N) {
+                m_count = 0;
+                m_barrier.signal();
+            } else {
+                m_barrier.wait();
+                m_barrier.signal();
+            }
+        }
+    }
+} bar1, bar2;
+
+void a(int id) {
+    while (true) {
+        cs.start_section();
+        work1();
+        cs.end_section();
+        bar1.wait_barrier();
+
+        cs.start_section();
+        work2();
+        cs.end_section();
+        bar2.wait_barrier();
+    }
+}
+int main() {
+    Thread ta[N];
+    for (int i = 0; i < N; i++) 
+        ta[i] = createThread(a, i);
+    for (int i = 0; i < N; i++) 
+        join(ta[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <stdlib.h>
+#include <monitor.h>
+#define N 5
+class CriticalSection;
+class CS : public CriticalSection {
+    ...
+} cs;
+class Barrier : SC_Monitor {
+    int m_count = 0;
+    cond m_barrier;
+public:
+    Barrier() : m_barrier(this) {
+        // empty
+    }
+    void wait_barrier() {
+        monitor {
+            m_count += 1;
+            if (m_count == B) {
+                m_count = 0;
+                m_barrier.signalAll();
+            } else {
+                m_barrier.wait();
+            }
+        }
+    }
+} bar1, bar2;
+
+void a(int id) {
+    while (true) {
+        cs.start_section();
+        work1();
+        cs.end_section();
+        bar1.wait_barrier();
+
+        cs.start_section();
+        work2();
+        cs.end_section();
+        bar2.wait_barrier();
+    }
+}
+int main() {
+    Thread ta[N];
+    for (int i = 0; i < N; i++) 
+        ta[i] = createThread(a, i);
+    for (int i = 0; i < N; i++) 
+        join(ta[i]);
+    return 0;
+}
+
+\end{lstlisting}
+
+

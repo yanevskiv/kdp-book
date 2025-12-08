@@ -1,0 +1,42 @@
+\clearpage
+\section{\latin Simple synchronization}
+\textbf{\large Zadatak} Proces je pokrenuo dve niti sa beskona\v{c}nim petljama, gde prva nit ispisuje na konzoulu znak \textlat{``a''} dok druga nit ispisuje znak ``\textlat{b}'' (\textlat{aaaaaaaaabbbbbbbbbbbaaaaaaaabbbb...}). Koriste\'{c}i semafore, potrebno je sinhronizovati niti tako da se na konzoli naizmeni\v{c}no ispisuju znakovi \textlat{``a''} i \textlat{``b''}. (\textlat{abababababababab...}).
+\\\\
+\textbf{\v{S}ta je raspodeljeni binarni semafor?}\\
+Raspodeljeni binarni semafor je binarni semafor (semafor \v{c}ija se vrednost kre\'{c}e izmedju 0 ili 1) \v{c}iji su pozivi operacije \texttt{wait(s)} raspodeljeni unutar koda jedne niti, a pozivi operacije \texttt{signal(s)} raspodeljeni unutar koda druge niti. Ovime jedna nit mo\v{z}e da kontroli\v{s}e tok druge niti. Naime, nit koja poziva \texttt{signal(s)} kontroli\v{s}e izvr\v{s}avanje niti koja poziva \texttt{wait(s)}.
+\\\\
+\textbf{\large Re\v{s}enje:} 
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+
+Sem sa = 1, sb = 0; // dva raspodeljena binarna semafora
+
+void a() 
+{
+    while (true) {
+        wait(sa);
+        print("a");
+		signal(sb);
+    }
+}
+
+void b() 
+{
+    while (true) {
+        wait(sb);
+        print("b");
+		signal(sa);
+    }
+}
+
+
+int main() {
+    Thread ta = createThread(a);
+    Thread tb = createThread(b);
+    join(ta);
+    join(tb);
+    return 0;
+}
+
+\end{lstlisting}

@@ -1,0 +1,137 @@
+\section{Uvod}
+\textbf{\v{S}ta je monitor?}\\
+Monitor je konstrukt koji je nalik klasi (u ovoj skripti je to bilo koja klasa koja subklasira apstratknu klasu \texttt{Monitor}) koji omogu\'{c}ava da se kod za sinhronizaciju i medjusobno isklju\v{c}ivanje apstrahuje van logike koju izvr\v{s}ava nit. Kod semafora i regiona, kod za medjusobno isklju\v{c}ivanje i sinhronizaciju je bio izme\v{s}an sa kodom za logiku. Kod monitora, niti isklju\v{c}ivo pozivaju \textbf{monitorske procedure} i ne vr\v{s}e sami sinhronizaciju, ve\'{c} monitor obavlja to monitor za njih. Monitor sadr\v{z}i interni \texttt{mutex}, red \v{c}ekanja za ulazak u monitor, i mo\v{z}e sadr\v{z}ati uslovne i promenljive \texttt{cond}.
+\\\\
+\textbf{\v{S}ta su monitorske procedure?}\\
+Monitorske procedure su metode monitora u koje se ulazi sinhrono t.j. zaklju\v{c}avanjem monitora prilikom ulaska, i otklju\v{c}avanjem monitora prilikom izlaska. Kada neka nit udje u monitorsku proceduru njenim pozivom, ni jedna druga nit ne mo\v{z}e u\'{c}i ni u jednu monitorsku proceduru dok prvobitna nit ne napusti monitor dola\v{z}enjem do kraja monitorske procedure, pozivom \texttt{cond.wait()}, ili pozivom \texttt{cond.signal()} kod \texttt{Signal-and-Wait} discipline.
+\\\\
+Sa semaforima, monitorska procedura se mo\v{z}e implemntirati pozivom \texttt{wait(mutex)} na po\v{c}etku procedure, i \texttt{signal(mutex)} na kraju procedure. Sa regionima, monitorska procedura se mo\v{z}e implementirati kao metoda koja obavija svoj kod sa \texttt{region (this) \{...\}}. U ovoj skripti, svaka monitorska procedura je ozna\v{c}ena blokom \texttt{monitor \{...\}} \v{s}to ima isto zna\v{c}enje kao \texttt{region (this) \{...\}}, ili \texttt{synchronized (this) \{...\}} u jeziku Java.\\\\
+Primer monitorskih procedura u jeziku Java:
+\begin{lstlisting}[language=java]
+public class Buffer {
+    public synchronized void put(int data) {
+        ...
+    }
+    public synchronized int get() {
+        ...
+    }
+}
+\end{lstlisting}
+\textbf{\v{S}ta su uslovne promenljive (\texttt{cond})?}\\
+Uslovne promenljive omogu\'{c}avaju privremeno napu\v{s}tanje monitora i suspendovanje niti unutar monitorske procedure dok se ne ispuni neki uslov. Uslove promenljive sadr\v{z}e (prioritetni) red blokiranih niti (\texttt{priority\_queue<int, Thread*>}) i podr\v{z}avaju slede\'{c}ih 6 (ili 7) operacija:
+\begin{enumerate}
+    \item \texttt{void wait()} - Nit koja pozove ovu operaciju izlazi monitora i dodaje se u red blokiranih na uslovnoj promenljivoj. Deblokiranje \'{c}e se vr\v{s}iti po \textlat{FIFO} redosledu blokiranja. 
+    \item \texttt{void wait(int rank)} - Nit koja pozove ovu operaciju izlazi monitora i dodaje se u red blokiranih na uslovnoj promenljivoj. Deblokiranje \'{c}e se vr\v{s}iti po prioritetnom redosledu blokiranja (manja vrednost zna\v{c}i ve\'{c}i prioritet).
+    \item \texttt{void signal()} - Ukoliko nema blokiranih niti na uslovnoj promenljivoj, ova operacija ne radi ni\v{s}ta. Ukoliko ima blokirnih niti, jedna nit se deblokira po redosledu navedenom gore. Koja nit dobija kontekst zavisi od discipline monitora (\texttt{SW} ili \texttt{SC}).
+    \item \texttt{void signalAll()} - Sve niti blokirane na uslovnoj promenljivoj se deblokiraju. Ukoliko je red blokiranih prazan, ova operacija ne radi ni\v{s}ta. \textbf{Napomena:} Ova operacija postoji samo kod monitora sa \texttt{Signal-and-Continue} disciplinom!
+    \item \texttt{bool queue()} - Odgovor da li postoje niti blokirane na uslovnoj promenljivoj.
+    \item \texttt{bool empty()} - Odgovor da li je red blokiranih prazan (suprotna vrednost od \texttt{queue()}).
+    \item \texttt{int minrank()} - Prioritet niti koja bi bila deblokirana pozivom \texttt{signal()}.
+\end{enumerate}
+\textbf{\v{S}ta je razlika izme\dj{}u uslovnih promenljivih i semafora?}\\
+ Osim  \v{s}to uslovne promenljive imaju vi\v{s}e operacija od semafora, za razliku od semafora uslovne promenljive nemaju ``vredstnost'', pa se stoga pona\v{s}anje operacija \texttt{wait()} i \texttt{signal()}  razlikuju:
+\begin{itemize}
+    \item Poziv \texttt{cond.wait()} \textbf{uvek} blokira pozivaju\'{c}u nit, dok poziv \texttt{wait(sem)} mo\v{z}e da blokira nit u zavisnosti od vrednosti semafora (naime, ako je vrednost semafora nula).
+    \item Ukoliko je red blokiranih niti \textbf{prazan}, \texttt{cond.signal()} ne radi ni\v{s}ta, dok \texttt{signal(sem)} inkrementira vrednost semafora.
+    \item Ukoliko je red blokiranih niti \textbf{neprazan}: \\Kod \texttt{SW} discipline, \texttt{cond.signal()} deblokira nit po \textlat{FIFO} (ili prioritetnom) redosledu i \textbf{predaje} kontekst deblokiranoj niti, dok \texttt{signal(sem)} deblokira nit po nasumi\v{c}nom redosledu i \textbf{ne predaje} kontekst deblokiranoj niti.\\\\Kod \texttt{SC} discipline, ni semafor ni uslovna promenljiva \textbf{ne predaju} kontekst deblokiranoj niti, ali uslovna promenljiva i dalje deblokira niti po \textlat{FIFO} (ili prioritetnom) redosledu, dok semafor - koji je podrazumevano nepo\v{s}ten - deblokira niti po nasumi\v{c}nom redosledu. 
+\end{itemize}
+Korisna \v{c}injenica jeste da, po definiciji, uslovna promenljiva deblokira niti po \textlat{FIFO} (ili prioritetnom) redosledu, za razliku od semafora koji su podrazumevano nepo\v{s}teni (ne-\textlat{FIFO}).
+\\\\
+\textbf{\v{S}ta je disciplina monitora?}\\
+Disciplina monitora defini\v{s}e pona\v{s}anje operacije \texttt{cond.signal()}. Postoje tri discipline montiora, od kojih je tre\'{c}a specijalni slu\v{c}aj druge:
+\begin{enumerate}
+    \item \texttt{Signal-and-Continue (SC)}: Kada nit unutar monitorske procedure nit pozove \texttt{cond.signal()}, nit koja je pozvala operaciju nastavlja dalje sa izvr\v{s}avanjem monitorske procedure, a signalizirana nit se stavlja u red \v{c}ekanja za ulazak u monitor (\texttt{entry queue}).
+    \item \texttt{Signal-and-Wait (SW)}: Kada nit unutar monitorske procedure pozove \texttt{cond.signal()} nit koja je pozvala operaciju odlazi u red \v{c}ekanja za ulazak u monitor, a signalizirana nit odmah ulazi u monitor.
+    \item \texttt{Signal-and-Urgent-Wait (SUW)}:  Kada nit unutar monitorske procedure pozove \texttt{cond.signal()} nit koja je pozvala operaciju odlazi u poseban red ``\texttt{urgent queue}'', a signalizirana nit odmah ulazi u monitor. Kada signalizirana nit napusti monitor, slede\'{c}a nit koja ulazi u monitor je ona iz \texttt{urgent queue}-a umesto \texttt{entry queue}-a.
+\end{enumerate}
+\textbf{\v{S}ta je monitorska invarijanta?}\\
+Monitorska invarianta (eng. \textlat{Invariant}) je bulov izraz koji je inicijalno istinit (\texttt{true}) i koji monitor (kori\v{s}\'{c}enjem uslovnih promenljivih) poku\v{s}ava da o\v{c}uva istinitim pri svakoj izmeni unutra\v{s}njih promenljivih. Na primer, monitorska invarijanta za monitor koji implementira ograni\v{c}en bafer kod \textlat{Producer/Consumer}-a je \texttt{(count >= 0 \&\& count < B)}. 
+\\\\
+\textbf{Kako se implementira monitor sa \texttt{Signal-and-Continue} disciplinom pomo\'{c}u semafora?}\\
+\begin{lstlisting}
+class SC_Monitor {
+	Sem mutex = 1;
+	void enter() {
+		wait(mutex);
+	}
+	void leave() {
+		signal(mutex);
+	}
+	class cond {
+		priority_queue<Sem&, int> qCond;
+		void wait(int rank = 0) {
+			Sem privs = 0; // private semaphore
+			qCond.push(privs, rank);
+			signal(mutex);
+			wait(privs);
+			wait(mutex);
+		}
+		void signal() {
+			if (! qCond.empty()) {
+				signal(qCond.pop());
+			}
+		}
+		void signalAll() {
+			while (! qCond.empty()) {
+				signal(qCond.pop());
+			}
+		}
+		bool queue() {
+			return qCond.size() > 0;
+		}
+		bool empty() {
+			return qCond.empty();
+		}
+		int minrank() {
+			return qCond.peek().rank; 
+		}
+	};
+};
+\end{lstlisting}
+\textbf{Kako se implementira monitor sa \texttt{Signal-and-Wait} disciplinom pomo\'{c}u semafora?}\\
+\begin{lstlisting}
+class SW_Monitor {
+	Sem mutex = 1;
+	queue<Sem&> qWait;
+	void enter() {
+		wait(mutex);
+	}
+	void leave() {
+		if (! qWait.empty()) {
+			signal(qWait.pop());
+		} else {
+			signal(m_mutex);
+		}
+	}
+	class cond {
+		priority_queue<Sem&, int> qCond;
+		void wait(int rank = 0) {
+			Sem privs = 0; // private semaphore
+			qCond.push(privs, rank);
+			if (! qWait.empty()) {
+				signal(qWait.pop());
+			} else {
+				signal(mutex);
+			}
+			wait(privs);
+		}
+		void signal() {
+			if (! qCond.empty()) {
+				Sem privs = 0; // private semaphore
+				qWait.push(privs);
+				signal(qCond.pop());
+				wait(privs);
+			}
+		}
+		bool queue() {
+			return qCond.size() > 0;
+		}
+		bool empty() {
+			return qCond.empty();
+		}
+		int minrank() {
+			return qCond.peek().rank; 
+		}
+	};
+};
+\end{lstlisting}

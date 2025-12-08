@@ -1,0 +1,23 @@
+\clearpage
+\section{\textlat{Ticket} algoritam}
+Kod \textbf{\textlat{Ticket}} algoritma, nit koja \v{z}eli da udje u kriti\v{c}nu sekciju najpre atomi\v{c}no dohvata globalni broj \texttt{ticket} u lokalnu promenljivu \texttt{number} i inkrementira globalni \texttt{ticket} za vrednost 1. Globalni \texttt{ticket} se atomi\v{c}no dohvata i inkrementira pozivom specijalne instrukcije \texttt{fetch\_and\_add(x, v)}. Nit potom \v{c}eka dok globalna vrednost \texttt{next} (``slede\'{c}i'') ne postane ba\v{s} vrednost prethodno dohvatanog broja \texttt{number}. Kada nit zavr\v{s}i sa kriti\v{c}nom sekcijom, slede\'{c}oj niti se dopu\v{s}ta ulazak u kriti\v{c}nu sekciju sa \texttt{next += 1} (nije neophodno da se vrednost \texttt{next} inkrementira specijalnom instrukcijom \texttt{fetch\_and\_add(x, v)} jer se kriti\v{c}na sekcija \texttt{/*CRITICAL SECTION*/} nastavlja i na sekciju \texttt{/*UNLOCK*/}).  Ticket algoritam garantuje ``fer'' (\textlat{FIFO}) ulazak u kriti\v{c}nu sekciju.
+\begin{lstlisting}
+volatile int ticket = 0;
+volatile int next = 0;
+
+void thread(int id)
+{
+    while (true) {
+		/* LOCK */
+        int number = fetch_and_add(&ticket, 1);
+        while (next != number)
+            skip();
+		/* CRITICAL SECTION */
+		work();
+		/* UNLOCK */
+		next += 1;
+		/* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

@@ -1,0 +1,115 @@
+\clearpage
+\section{\latin Barrier synchronization}
+\textbf{\large Zadatak} Proces je pokrenuo $N$ niti koje treba da zajedni\v{c}ki odrade neki posao \texttt{work1()}, i treba predju na posao \texttt{work2()} tek kada svih $N$ niti zavr\v{s}e posao \texttt{work1()}. Sli\v{c}no, potrebno je da svih $N$ zavr\v{s}e posao \texttt{work2()} pre nego \v{s}to se predje nazad na posao \texttt{work1()}. Poslovi se moraju obavljati sa ekskluzivnim pravom pristupa. Implementirati ovakvo pona\v{s}anje niti pomo\'{c}u semafora.
+\\\\
+\textbf{\v{S}ta je barijera?}
+\\
+Barijera (eng. \textlat{Barrier}) je ta\v{c}ka u kodu gde je potrebno da do\dj{}e odre\dj{}en broj niti pre nego \v{s}to niti zaglavljene na barijeri ne nastave sa svojim izvr\v{s}avanjem. Ukoliko neka nit do\dj{}e do barijere, broj niti na barijeri \'{c}e se pove\'{c}ati za jedan. Ukiliko je u tom slu\v{c}aju i dalje nedovoljan broj niti na barijeri, data nit \'{c}e se blokirati. U suprotnom, data nit \'{c}e deblokirati sve niti ranije zablokirane na barijeri i nastaviti dalje sa izv\v{s}avanjem. Primer kori\v{s}\'{c}enja barijere sa \textlat{POSIX} nitima:
+\begin{lstlisting}
+pthread_barrier_t bar;
+pthread_barrier_init(&bar, NULL, 5);
+...
+pthread_barrier_wait(&bar);
+...
+pthread_barrier_destroy(&bar);
+\end{lstlisting}
+\textbf{\large 1. na\v{c}in}\\
+%Ako kod unutar petlje \textbf{while (true) \{ ... \}} zamislimo kao jednu kru\v{z}nicu, kod mo\v{z}emo podeliti na dva sekcije pomo\'{c}u dva "vrata". 
+Nit koja u\dj{}e kroz prva vrata \texttt{door1} pozivom \texttt{wait(door1)} dobija ekskluzivno pravo pristupa i mo\v{z}e da obavi posao \texttt{work1()}. Kada nit zavr\v{s}i posao \texttt{work1()} inkrementira \texttt{counter} i, pre nego \v{s}to do\dj{}e do drugih vrata (t.j. \texttt{wait(door2)}), proverava koja vrata treba otvoriti slede\'{c}e: Ukoliko je \texttt{count < N}, pu\v{s}ta se jo\v{s} jedna nit kroz \texttt{door1} pozivom \texttt{signal(door1)}. Ukoliko je \texttt{count == N}, counter se resetuje na 0 kako bi se mogao koristiti u drugoj sekciji, i jedna nit se pu\v{s}ta kroz druga vrata pozivom \texttt{signal(door2)} u drugu sekciju, To mo\v{z}e biti upravo ta nit koja je pozvala \texttt{signal(door2)} i tek treba da do\dj{}e do \texttt{wait(door2)}, ili neka od $N-1$ niti ve\'{c} zablokirane na \texttt{wait(door2)}.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+
+Sem door1 = 1, door2 = 0;
+int count = 0;
+
+void a(int id) 
+{
+    while (true) {
+        wait(door1);
+        /* SECTION 1 */
+		work1();
+        count += 1;
+        if (count == N) {
+            count = 0;
+            signal(door2);
+        } else {
+            signal(door1);
+        }
+        wait(door2);
+        /* SECTION 2 */
+        work2();
+		count += 1;
+        if (count == N) {
+            count = 0;
+            signal(door1);
+        } else {
+            signal(door2);
+        }
+    }
+}
+
+int main() {
+    Thread t[N];
+    for (int i = 0; i < N; i++) 
+        t[i] = createThread(a, i);
+    for (int i = 0; i < N; i++)
+        join(t[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{\large 2. na\v{c}in.}\\
+Mo\v{z}emo napraviti strukturu \texttt{struct Barrier} koja implementira barijeru  pomo\'{c}u semafora, i onda instancirati dve barijere: \texttt{bar1} i \texttt{bar2}. Za razliku od ``vrata'' u prethodnom primeru (\texttt{door1} i \texttt{door2}) koja su ujedno nam obezbe\dj{}ivala, i sinhronizaciju, i medjusobno isklju\v{c}ivanje, barijere nam  omogu\'{c}avaju samo sinhronizaciju, a medjusobno isklju\v{c}ivanje obezbedjujemo sami pomo\'{c}u \textbf{\textlat{mutex}}-a.
+
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+
+struct Barrier {
+	void wait() {
+		wait(m_mutex);
+		m_count += 1;
+		if (m_count == N) {
+			m_count = 0;
+			for (int i = 0; i < N; i++)
+				signal(m_barrier);
+		}
+		signal(m_mutex);
+		wait(m_barrier);
+	}
+private:
+	int m_count = 0;
+	Sem m_mutex = 1;
+	Sem m_barrier = 0;
+} bar1, bar2;
+
+Sem mutex = 1;
+void a(int id) 
+{
+    while (true) {
+		/* SECTION 1 */
+		wait(mutex);
+		work1();
+		signal(mutex);
+		bar1.wait();
+		
+		/* SECTION 2 */
+		wait(mutex);
+		work2();
+		signal(mutex);
+		bar2.wait();
+    }
+}
+
+int main() {
+    Thread t[N];
+    for (int i = 0; i < N; i++) 
+        t[i] = createThread(a, i);
+    for (int i = 0; i < N; i++)
+        join(t[i]);
+    return 0;
+}
+\end{lstlisting}

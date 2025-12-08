@@ -1,0 +1,364 @@
+\clearpage
+\section{\latin Cigarette smokers problem}
+\textbf{\large Zadatak} Proces ima deljenu strukturu \texttt{table} i pokrenuo je jednu nit agenta \texttt{agent()} i tri niti pu\v{s}a\v{c}a \texttt{smoker(MATCHES)}, \texttt{smoker(PAPER)} i \texttt{smoker(TOBACCO)}. Pu\v{s}a\v{c}i imaju beskona\v{c}ne zalihe jedne vrste predmeta, ali su im potrebene i druge dve vrste da bi pu\v{s}ili. Agent na sto nasumi\v{c}no stavlja neka dva  predmeta i \v{c}eka dok ih neki pu\v{s}a\v{c} ne uzme. Pu\v{s}a\v{c} koji vidi da mo\v{z}e da pu\v{s}i sa ta dva predmeta uzima ih sa stola i pu\v{s}i. Kada pu\v{s}a\v{c} zavr\v{s}i pu\v{s}enje, agentu signalizira da mo\v{z}e opet da stavlja predmete na sto. Implementirati pona\v{s}anje pu\v{s}a\v{c}a \texttt{void smoker(int item)} i agenta \texttt{agent()} pomo\'{c}u semafora.
+\\\\
+\textbf{\large Re\v{s}enje}
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <stdlib.h>
+enum {
+    MATCHES = 0,
+    TOBACCO = 1,
+    PAPER   = 2
+};
+struct Table {
+    bool matches = false;
+    bool paper   = false;
+    bool tobacco = false;
+} table; 
+Sem matches = 0;
+Sem tobacco = 0;
+Sem paper   = 0;
+Sem ok      = 0;
+
+void agent() {
+    while (true) {
+        // produce items...
+        int item = rand() % 3;
+        // put items on the table and wait for smoker
+        switch (item) {
+            case MATCHES: {
+                table.paper = true;
+                table.tobacco = true;
+                signal(matches);
+                wait(ok);
+            } break;
+            case PAPER: {
+                table.matches = true;
+                table.tobacco = true;
+                signal(paper);
+                wait(ok);
+            } break;
+            case TOBACCO: {
+                table.matches = true;
+                table.paper = true;
+                signal(tobacco);
+                wait(ok);
+            } break;
+        }
+    }
+}
+void smoker(int id) {
+    while (true) {
+        switch (id) {
+            case MATCHES: {
+                wait(matches);
+                table.paper = false;
+                table.tobacco = false;
+                // create cigarette and smoke...
+                // signal agent
+                signal(ok);
+            } break;
+            case PAPER: {
+                wait(paper);
+                table.matches = false;
+                table.tobacco = false;
+                // create cigarette and smoke...
+                // signal agent
+                signal(ok);
+            } break;
+            case TOBACCO: {
+                wait(tobacco);
+                table.matches = false;
+                table.paper = false;
+                // create cigarette and smoke...
+                // signal agent
+                signal(ok);
+            } break;
+        }
+    }
+    
+}
+int main() {
+    Thread ta = createThread(agent);
+    Thread ts1 = createThread(smoker, MATCHES);
+    Thread ts2 = createThread(smoker, PAPER);
+    Thread ts3 = createThread(smoker, TOBACCO);
+    join(ta);
+    join(ts1);
+    join(ts2);
+    join(ts3);
+    return 0;
+}
+\end{lstlisting}
+\clearpage
+\textbf{\large 1. dodatno re\v{s}enje u slu\v{c}aju da \texttt{agent()} ne radi signalizaciju}\\
+Ako agent nikako ne signalizira pu\v{s}a\v{c}e, pu\v{s}a\v{c}i moraju da izv\v{s}avaju \texttt{busy wait} i povremeno proveravaju da li se na stolu nalaze predmeti koji su potrebni. S obzirom da vi\v{s}e niti mogu istovremeno da pristupaju stolu, neophodan je \textlat{mutex}.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <stdlib.h>
+#define ITEM_COUNT  3
+#define THIRD_ITEM(first, second) (1 - (((first) - 1) + ((second) -1)))
+#define OTHER_ITEM_1(item) ((item) == 0 ? ITEM_COUNT - 1 : (item) - 1)
+#define OTHER_ITEM_2(item) (((item) + 1) % ITEM_COUNT) 
+enum {
+    MATCHES = 0,
+    TOBACCO = 1,
+    PAPER   = 2
+};
+Sem mutex = 1;
+Sem ok = 0;
+bool table[ITEM_COUNT] = { false, false, false };
+
+void agent() {
+    while (true) {
+        // produce two items...
+        int item = rand() % 3;
+        // put items on the table and wait for smoker
+        wait(mutex);
+        table[OTHER_ITEM_1(item)] = true;
+        table[OTHER_ITEM_2(item)] = true;
+        signal(mutex);
+        wait(ok);
+    }
+}
+void smoker(int item) {
+    int item1 = OTHER_ITEM_1(item);
+    int item2 = OTHER_ITEM_2(item);
+    while (true) {
+        // wait for items (busy wait)
+        while (true) {
+            wait(mutex);
+            if (table[item1] && table[item2]) {
+                table[item1] = false;
+                table[item2] = false;
+                signal(mutex);
+                break;
+            } else {
+                signal(mutex);
+                usleep(50);
+            }
+        }
+		// create cigarette and smoke...
+		// signal agent
+        signal(ok);
+    }
+}
+int main() {
+    Thread ta = createThread(agent);
+    Thread ts1 = createThread(smoker, MATCHES);
+    Thread ts2 = createThread(smoker, PAPER);
+    Thread ts3 = createThread(smoker, TOBACCO);
+    join(ta);
+    join(ts1);
+    join(ts2);
+    join(ts3);
+    return 0;
+}
+
+\end{lstlisting}
+\clearpage
+\textbf{\large 2. dodatno re\v{s}enje - u slu\v{c}aju da \texttt{agent()} signalizira jedan semafor}\\
+Recimo da agent kada stavi dva predmeta na sto signalizira semafor onog predmeta koji \textbf{nije} stavio na sto. Pu\v{s}a\v{c} tada treba da \v{c}eka na semafor predmeta koji mu \textbf{ne treba} jer se tada nalaze na stolu nalaze predmeti koji mu  trebaju. S obzirom da u ovom re\v{s}enju samo jedna nit mo\v{z}e pristupati stolu u nekom trenutku, \textlat{mutex} nije potreban ali nije gre\v{s}ka iskoristi ga.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <stdlib.h>
+#define ITEM_COUNT 3
+#define OTHER_ITEM_1(item) (((item) + 1) % ITEM_COUNT)
+#define OTHER_ITEM_2(item) ((item) == 0 ? (ITEM_COUNT - 1) : ((item) - 1))
+enum {
+    MATCHES = 0,
+    TOBACCO = 1,
+    PAPER   = 2
+};
+Sem sem[ITEM_COUNT] = { 0, 0, 0 };
+Sem ok = 0;
+// Sem mutex = 1;
+bool table[ITEM_COUNT] = { false, false, false };
+
+void agent() {
+    while (true) {
+        // produce two items...
+        int item = rand() % 3;
+        // put them on the table and wait for smoker
+        //wait(mutex);
+        table[OTHER_ITEM_1(item)] = true;
+        table[OTHER_ITEM_2(item)] = true;
+        //signal(mutex);
+        signal(sem[item]);
+        wait(ok);
+    }
+}
+void smoker(int item) {
+    int item1 = OTHER_ITEM_1(item);
+    int item2 = OTHER_ITEM_2(item);
+    while (true) {
+		// wait for items
+		wait(sem[item]);
+        //wait(mutex);
+		table[item1] = false;
+		table[item2] = false;
+        //signal(mutex);
+        // create cigarette and smoke ...
+		// signal agent
+        signal(ok); 
+    }
+    
+}
+int main() {
+    Thread ta = createThread(agent);
+    Thread ts1 = createThread(smoker, MATCHES);
+    Thread ts2 = createThread(smoker, PAPER);
+    Thread ts3 = createThread(smoker, TOBACCO);
+    join(ta);
+    join(ts1);
+    join(ts2);
+    join(ts3);
+    return 0;
+}
+
+\end{lstlisting}
+\newpage
+\textbf{\large 3. dodatno re\v{s}enje - u slu\v{c}aju da \texttt{agent()} signalizira dva semafora}\\
+Recimo da agent kada stavi dva predmeta na sto signalizira dva semafora i to ba\v{s} onih predmeta koje je i stavio na sto. U tom slu\v{c}aju, da bi svi signali bili uhva\'{c}eni, svaki pu\v{s}a\v{c} i dalje mora da \v{c}eka na semafor jednog predmeta i toj onog predmeta koji im \textbf{ne treba}. Dva pu\v{s}a\v{c}a koji uhvate signale od agenta koji treba da se dogovore da probude onog tre\'{c}eg jer je tre\'{c}i pu\v{s}a\v{c} taj koji mo\v{z}e da uzme predmete sa stola i pu\v{s}i. \textlat{Mutex} nije neophodan za \texttt{table[]} ali je neophodan za \texttt{agree[]} koji pu\v{s}a\v{c}i koriste da se dogovaraju na pomenut na\v{c}in.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <stdlib.h>
+#define ITEM_COUNT 3
+#define OTHER_ITEM_1(item) (((item) + 1) % ITEM_COUNT)
+#define OTHER_ITEM_2(item) ((item) == 0 ? (ITEM_COUNT - 1) : ((item) - 1))
+enum {
+    MATCHES = 0,
+    TOBACCO = 1,
+    PAPER   = 2
+};
+Sem sem[] = { 0, 0, 0 };
+Sem ok = 0;
+Sem mutex = 1;
+bool table[] = { false, false, false };
+bool agree[] = { false, false, false };
+
+void agent() {
+    while (true) {
+        // produce two items...
+        int item = rand() % 3;
+        // put items on the table and wait for smoker
+        table[OTHER_ITEM_1(item)] = true;
+        table[OTHER_ITEM_2(item)] = true;
+        signal(sem[OTHER_ITEM_1(item)]);
+        signal(sem[OTHER_ITEM_2(item)]);
+        wait(ok);
+    }
+}
+void smoker(int id) {
+    while (true) {
+        //wait for itmes
+        while (true) {
+            wait(sem[id]);
+            wait(mutex);
+            agree[id] = true;
+            if (agree[PAPER] && agree[MATCHES] && agree[TOBACCO]) {
+                agree[PAPER] = false;
+                agree[MATCHES] = false;
+                agree[TOBACCO] = false;
+                signal(mutex);
+                break;
+            } else if (agree[id] && agree[OTHER_ITEM_1(id)]) {
+                signal(sem[OTHER_ITEM_2(id)]);
+            } else if (agree[id] && agree[OTHER_ITEM_2(id)]) {
+                signal(sem[OTHER_ITEM_1(id)]);
+            }
+            signal(mutex);
+        }
+        table[OTHER_ITEM_1(id)] = false;
+        table[OTHER_ITEM_2(id)] = false;
+        // create cigarette and smoke...
+        // signal agent
+        signal(ok);
+    }
+    
+}
+int main() {
+    Thread ta = createThread(agent);
+    Thread ts1 = createThread(smoker, MATCHES);
+    Thread ts2 = createThread(smoker, PAPER);
+    Thread ts3 = createThread(smoker, TOBACCO);
+    join(ta);
+    join(ts1);
+    join(ts2);
+    join(ts3);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{\large 4. dodatno re\v{s}enje - u slu\v{c}aju da \texttt{agent()} signalizira tri semafora.}\\
+Recimo da agent signalizira semafore svih predmeta kada god stavi ne\v{s}to na sto. U tom slu\v{c}aju, pu\v{s}a\v{c} treba da \v{c}eka na jedan od semafora i samo proveri da li su predmeti koji su njemu potrebni na stolu.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#include <stdlib.h>
+#define ITEM_COUNT  3
+#define THIRD_ITEM(first, second) (1 - (((first) - 1) + ((second) -1)))
+#define OTHER_ITEM_1(item) ((item) == 0 ? ITEM_COUNT - 1 : (item) - 1)
+#define OTHER_ITEM_2(item) (((item) + 1) % ITEM_COUNT) 
+enum {
+    MATCHES = 0,
+    TOBACCO = 1,
+    PAPER   = 2
+};
+Sem mutex = 1;
+Sem ok = 0;
+Sem sem[ITEM_COUNT] = { 0, 0, 0 };
+bool table[ITEM_COUNT] = { false, false, false };
+void agent() {
+    while (true) {
+        // produce two items
+        int item = rand() % 3;
+        // put them on table and wait for smoker
+        wait(mutex);
+        table[OTHER_ITEM_1(item)] = true;
+        table[OTHER_ITEM_2(item)] = true;
+        signal(mutex);
+        signal(sem[MATCHES]);
+        signal(sem[TOBACCO]);
+        signal(sem[PAPER]);
+        wait(ok);
+    }
+}
+void smoker(int item) {
+    int item1 = OTHER_ITEM_1(item);
+    int item2 = OTHER_ITEM_2(item);
+    while (true) {
+        // wait for items
+        bool spin = true;
+        while (spin) {
+            wait(sem[item]);
+            wait(mutex);
+            if (table[item1] && table[item2]) {
+                table[item1] = false;
+                table[item2] = false;
+                spin = false;
+            }
+            signal(mutex);
+        }
+        // create cigarette and smoke...
+        signal(ok);
+    }
+    
+}
+int main() {
+    Thread ta = createThread(agent);
+    Thread ts1 = createThread(smoker, MATCHES);
+    Thread ts2 = createThread(smoker, PAPER);
+    Thread ts3 = createThread(smoker, TOBACCO);
+    join(ta);
+    join(ts1);
+    join(ts2);
+    join(ts3);
+    return 0;
+}
+\end{lstlisting}

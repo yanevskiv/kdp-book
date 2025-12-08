@@ -1,0 +1,25 @@
+\section{Uvod}
+\textbf{\v{S}ta je semafor?}\\
+\textbf{Semafori} (eng. \textlat{Semaphore}) su mehanizam koji omogu\'{c}ava sinhronizaciju ili me\dj{}usobno isklju\v{c}ivanje izmedju dve ili vi\v{s}e niti. Semafor ima svoj internu vrednost (\texttt{int value}), red blokiranih niti na semaforu (\texttt{queue<Thread*>}), i podr\v{z}ava slede\'{c}e dve operacije:
+\begin{itemize}
+    \item \texttt{void wait(s)} - Ukoliko je vrednost semafora nula, nit se dodaje u red blokiranih na semaforu. Ukoliko je vrednost semafora ve\'{c}a od nula, vrednost semafora se dekrementira za 1.
+    \item \texttt{void signal(s)} - Ukoliko postoje zablokirane niti u redu blokiranih, jedna nit iz reda blokiranih se deblokira. Ukoliko je red zablokiranih prazan, vrednost semafora se inkrementira za 1.
+\end{itemize}
+Vrednost ovako definisanog semafora ne mo\v{z}e da ode ispod nule. Tako\dj{}e, u redu zablokiranih ne mogu da postoje niti ukoliko je vrednost semafora ve\'{c}a od nule.
+\\\\
+\textbf{Po\v{s}ten semafor} je onaj koji pozivom operacije \texttt{signal(s)} deblokira niti po \textlat{FIFO} redosledu (nit koja je ranije pozvala \texttt{wait(s)} \'{c}e se ranije deblokirati).\\
+\textbf{Nepo\v{s}ten semafor} je onaj koji pozivom operacije \texttt{signal(s)} deblokira niti po nasumi\v{c}nom redosledu.\\\\
+U ovoj skripti (i na KDP-u) se podrazumevaju \textbf{nepo\v{s}teni semafori} - tako da je za implementaciju \textlat{FIFO} redosleda neophodno npr. koristiti tehniku privatnih semafora sa \texttt{queue<int>}.
+\\\\
+Primer kori\v{s}\'{c}enja \textlat{POSIX} semafora:
+\begin{lstlisting}
+#include <semaphore.h>
+sem_t mutex;
+sem_init(&mutex, 0, 1);
+...
+sem_wait(&mutex) // wait 
+/* CRITICAL SECTION */
+sem_post(&mutex); // sginal
+...
+sem_destroy(&mutex);
+\end{lstlisting}

@@ -1,0 +1,44 @@
+\clearpage
+\section{\latin Simple synchronization}
+\textbf{\large Zadatak} Proces je pokrenuo dve niti sa beskona\v{c}nim petljama, gde prva nit ispisuje na konzoulu znak \textlat{``a''} dok druga nit ispisuje znak ``\textlat{b}'' (\textlat{aaaaaaaaabbbbbbbbbbbaaaaaaaabbbb...}). Koriste\'{c}i uslovne kriti\v{c}ne regione, potrebno je sinhronizovati niti tako da se na konzoli naizmeni\v{c}no ispisuju znakovi \textlat{``a''} i \textlat{``b''}. (\textlat{abababababababab...}).
+\\\\
+\textbf{\large Re\v{s}enje}
+\begin{lstlisting}
+#include <thread.h>
+#include <region.h>
+#define N 10
+struct AB : Region {
+    int c = 'a';
+} ab;
+
+void a() {
+    while (true) {
+        region (ab) {
+            await(ab.c == 'a');
+        }
+        print("A");
+        region (ab) {
+            ab.c = 'b';
+        }
+    }
+}
+void b() {
+    while (true) {
+        region (ab) {
+            await(ab.c == 'b');
+        }
+        print("B");
+        region (ab) {
+            ab.c = 'a';
+        }
+    }
+}
+int main() 
+{
+    Thread ta = createThread(a);
+    Thread tb = createThread(b);
+    join(ta);
+    join(tb);
+    return 0;
+}
+\end{lstlisting}

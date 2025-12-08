@@ -1,0 +1,463 @@
+\clearpage
+\section{\latin Dining philosophers}
+\textbf{\large Zadatak} Proces je pokrenuo 5 niti koje simuliraju pona\v{s}anje filozofa za stolom. Filozof neko vreme misli, uzima levu i desnu vilju\v{s}ku na stolu, jede ru\v{c}ak na tanjiru, vra\'{c}a vilju\v{s}ke, i nastavlja da misli. Filozof ne mo\v{z}e da uzme levu vilju\v{s}ku ukoliko ju je trenutno filozof levo koristi, i sli\v{c}no ne mo{z}e da uzme desnu vilju\v{s}ku ukoliko ju je trenutno filozof desno koristi. Ukoliko svih pet filozofa u isto vreme poku\v{s}aju da uzmu levu vilju\v{s}ku, ni jedan filozof ne\'{c}e mo\'{c}i da uzme desnu vilju\v{s}ku, i tada nastupa deadlock. Implementirati pona\v{s}anje filozofa pomo\'{c}u monitora tako da se ovaj deadlock ne mo\v{z}e dogoditi.
+\\\\
+\textbf{\large 1. na\v{c}in}\\
+Re\v{s}enje gde obr\'{c}emo uzimanja vilju\v{s}aka redosled parnim filozofa.
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SW_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    cond m_waitForFork[N];
+public:
+    Table() : m_waitForFork {this, this, this, this, this} {
+        
+    }
+    void acquire_fork(int which) {
+        monitor {
+            if (! m_forkFree[which]) 
+                m_waitForFork[which].wait();
+            m_forkFree[which] = false;
+        }
+    }
+
+    void release_fork(int which) {
+        monitor {
+            m_forkFree[which] = true;
+            m_waitForFork[which].signal();
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        if (id % 2 == 0) {
+            table.acquire_fork(left);
+            table.acquire_fork(right);
+        } else {
+            table.acquire_fork(right);
+            table.acquire_fork(left);
+        }
+        // Eat
+        eat();
+        // Release forks
+        table.release_fork(left);
+        table.release_fork(right);
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SC_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    bool m_needFork[N] = { false, false, false, false, false};
+    int  m_ticket = N - 1;
+    cond m_waitForFork[N];
+    cond m_waitForTicket;
+public:
+    Table() 
+        : m_waitForFork {this, this, this, this, this}
+        , m_waitForTicket {this} {
+        
+    }
+    void acquire_fork(int which) {
+        monitor {
+            if (! m_forkFree[which]) {
+                m_needFork[which] = true;
+                m_waitForFork[which].wait();
+            } else {
+                m_forkFree[which] = false;
+            }
+        }
+    }
+    void release_fork(int which) {
+        monitor {
+            m_forkFree[which] = true;
+            if (m_needFork[which]) {
+                m_forkFree[which] = false;
+                m_needFork[which] = false;
+                m_waitForFork[which].signal();
+            }
+        }
+    }
+    void acquire_ticket() {
+        monitor {
+            while (m_ticket == 0)
+                m_waitForTicket.wait();
+            m_ticket -= 1;
+        }
+    }
+    void release_ticket() {
+        monitor {
+            m_ticket += 1;
+            m_waitForTicket.signal();
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        table.acquire_ticket();
+        table.acquire_fork(left);
+        table.acquire_fork(right);
+        // Eat
+        eat();
+        // Release forks
+        table.release_fork(left);
+        table.release_fork(right);
+        table.release_ticket();
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\clearpage
+\textbf{\large 2. na\v{c}in}\\
+Re\v{s}enje gde imamo ``\textlat{ticket}'' inicijalizovan na $N-1$, gde je $N$ broj filozofa.
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SW_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    bool m_needFork[N] = { false, false, false, false, false};
+    int  m_ticket = N - 1;
+    cond m_waitForFork[N];
+    cond m_waitForTicket;
+public:
+    Table() 
+        : m_waitForFork {this, this, this, this, this}
+        , m_waitForTicket {this} {
+        
+    }
+    void acquire_fork(int which) {
+        monitor {
+            if (! m_forkFree[which])
+                m_waitForFork[which].wait();
+            m_forkFree[which] = false;
+        }
+    }
+    void release_fork(int which) {
+        monitor {
+            m_forkFree[which] = true;
+            m_waitForFork[which].signal();
+        }
+    }
+    void acquire_ticket() {
+        monitor {
+            if (m_ticket == 0)
+                m_waitForTicket.wait();
+            m_ticket -= 1;
+        }
+    }
+    void release_ticket() {
+        monitor {
+            m_ticket += 1;
+            m_waitForTicket.signal();
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        table.acquire_ticket();
+        table.acquire_fork(left);
+        table.acquire_fork(right);
+        // Eat
+        eat();
+        // Release forks
+        table.release_fork(left);
+        table.release_fork(right);
+        table.release_ticket();
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SC_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    bool m_needFork[N] = { false, false, false, false, false};
+    int  m_ticket = N - 1;
+    cond m_waitForFork[N];
+    cond m_waitForTicket;
+public:
+    Table() 
+        : m_waitForFork {this, this, this, this, this}
+        , m_waitForTicket {this} {
+        
+    }
+    void acquire_fork(int which) {
+        monitor {
+            if (! m_forkFree[which]) {
+                m_needFork[which] = true;
+                m_waitForFork[which].wait();
+            } else {
+                m_forkFree[which] = false;
+            }
+        }
+    }
+    void release_fork(int which) {
+        monitor {
+            m_forkFree[which] = true;
+            if (m_needFork[which]) {
+                m_forkFree[which] = false;
+                m_needFork[which] = false;
+                m_waitForFork[which].signal();
+            }
+        }
+    }
+    void acquire_ticket() {
+        monitor {
+            while (m_ticket == 0)
+                m_waitForTicket.wait();
+            m_ticket -= 1;
+        }
+    }
+    void release_ticket() {
+        monitor {
+            m_ticket += 1;
+            m_waitForTicket.signal();
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        table.acquire_ticket();
+        table.acquire_fork(left);
+        table.acquire_fork(right);
+        // Eat
+        eat();
+        // Release forks
+        table.release_fork(left);
+        table.release_fork(right);
+        table.release_ticket();
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\clearpage
+\textbf{\large 3. na\v{c}in}\\
+Re\v{s}enje gde uzimamo obe vilju\v{s}ke u isto vreme i vra\'{c}amo obe vilju\v{s}ke u isto vreme, pritom bude\'{c}i filozofa levo ili desno ukoliko oni ranije nisu uspeli.
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SW_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    bool m_hungry[N] = { false, false, false, false, false };
+    cond m_waitForForks[N];
+public:
+    Table() : m_waitForForks {this, this, this, this, this} {
+        
+    }
+    void acquire_forks(int left, int right) {
+        monitor {
+            int id = RIGHT(left); // same as LEFT(right)
+            if (! (m_forkFree[left] && m_forkFree[right])) {
+                m_hungry[id] = true;
+                m_waitForForks[id].wait();
+            }
+            m_hungry[id] = false;
+            m_forkFree[left] = false;
+            m_forkFree[right] = false;
+        }
+    }
+
+    void release_forks(int left, int right) {
+        monitor {
+            m_forkFree[left] = true;
+            m_forkFree[right] = true;
+            if (m_hungry[left] && m_forkFree[LEFT(left)])  {
+                m_waitForForks[left].signal();
+            } else if (m_hungry[right] && m_forkFree[RIGHT(right)]) {
+                m_waitForForks[right].signal();
+            }
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        table.acquire_forks(left, right);
+        // Eat
+        eat();
+        // Release forks
+        table.release_forks(left, right);
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+#define N 5
+#define LEFT(id) ((id) == 0 ? N - 1 : (id) - 1)
+#define RIGHT(id) (((id) + 1) % N)
+
+class Table : SC_Monitor {
+    bool m_forkFree[N] = { true, true, true, true, true };
+    bool m_hungry[N] = { false, false, false, false, false };
+    cond m_waitForForks[N];
+public:
+    Table() : m_waitForForks {this, this, this, this, this} {
+        
+    }
+    void acquire_forks(int left, int right) {
+        monitor {
+            int id = RIGHT(left); // same as LEFT(right)
+            if (! (m_forkFree[left] && m_forkFree[right])) {
+                m_hungry[id] = true;
+                m_waitForForks[id].wait();
+            } else {
+                m_forkFree[left] = false;
+                m_forkFree[right] = false;
+            }
+        }
+    }
+
+    void release_forks(int left, int right) {
+        monitor {
+            m_forkFree[left] = true;
+            m_forkFree[right] = true;
+            if (m_hungry[left] && m_forkFree[LEFT(left)])  {
+                m_hungry[left] = false;
+                m_forkFree[left] = false;
+                m_forkFree[LEFT(left)] = false;
+                m_waitForForks[left].signal();
+            } else if (m_hungry[right] && m_forkFree[RIGHT(right)]) {
+                m_hungry[right] = false;
+                m_forkFree[right] = false;
+                m_forkFree[RIGHT(right)] = false;
+                m_waitForForks[right].signal();
+            }
+        }
+    }
+} table;
+
+void phil(int id) {
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        table.acquire_forks(left, right);
+        // Eat
+        eat();
+        // Release forks
+        table.release_forks(left, right);
+    }
+}
+
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}

@@ -1,0 +1,24 @@
+\clearpage
+\section{Andersonov (\textlat{ABQL}) algoritam}
+Kod \textbf{Andersonovog \textlat{ABQL (Array-Based Queuing Lock)}} algoritma, svaka nit \v{c}eka na svoj slot u nekom nizu \v{c}ija je veli\v{c}ina jednaka broju niti. Prvi slot je ozna\v{c}en kao otklju\v{c}an, tako da prva nit koja nai\dj{}e mo\v{z}e da prodje u kriti\v{c}nu sekciju, dok su ostali slotovi zaklju\v{c}ani. Nit atomi\v{c}no dohvata \texttt{slot} u svoj privatni \texttt{mySlot} i inkrementira globalni \texttt{slot}. Globalni \texttt{slot} se atomi\v{c}no dohvata i inkrementira pozivom specijalne instrukcije \texttt{fetch\_and\_add(x, v)}. Kada nit zavr\v{s}i sa ktriti\v{c}nom sekcijom, svoj slot resetuje, a nit zablokiranu na slede\'{c}em slotu propu\v{s}ta. Kao i \textlat{Ticket} algoritam, Andersonov algoritam garantuje ``fer'' (\textlat{FIFO}) redosled ulaska u kriti\v{c}nu sekciju.
+\begin{lstlisting}
+volatile bool flag[N] = { true };
+volatile int slot = 0;
+
+void thread(int id)
+{
+    while (true) {
+        /* LOCK */
+		int mySlot = fetch_and_add(&slot, 1) % N;
+        while (flag[mySlot] == false)
+            skip();
+        /* CRITICAL SECTION */
+        work();
+        /* UNLOCK  */
+        flag[mySlot] = false;
+        flag[(mySlot + 1) % N] = true;
+        /* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

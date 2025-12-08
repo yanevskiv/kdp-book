@@ -1,0 +1,211 @@
+\clearpage
+\section{\latin Dining philosophers}
+\textbf{\large Zadatak} Proces je pokrenuo 5 niti koje simuliraju pona\v{s}anje filozofa za stolom. Filozof neko vreme misli, uzima levu i desnu vilju\v{s}ku na stolu, jede ru\v{c}ak na tanjiru, vra\'{c}a vilju\v{s}ke, i nastavlja da misli. Filozof ne mo\v{z}e da uzme levu vilju\v{s}ku ukoliko ju je trenutno filozof levo koristi, i sli\v{c}no ne mo{z}e da uzme desnu vilju\v{s}ku ukoliko ju je trenutno filozof desno koristi. Ukoliko svih pet filozofa u isto vreme poku\v{s}aju da uzmu levu vilju\v{s}ku, ni jedan filozof ne\'{c}e mo\'{c}i da uzme desnu vilju\v{s}ku, i tada nastupa deadlock. Implementirati pona\v{s}anje filozofa pomo\'{c}u semafora tako da se ovaj deadlock ne mo\v{z}e dogoditi.
+\\\\
+\textbf{\v{S}ta je graf alokacije resursa?}\\
+Graf alokacije resursa (eng. \textlat{Resource allocation graph (RAG)}) je usmeren graf u kome \v{c}vorovi predstavljaju niti ili resurse, a grane povezuju niti i resurse. Ukoliko je grana usmerena od \v{c}vora niti ka \v{c}voru resursa ($\textrm{nit}\rightarrow \textrm{resurs}$), data nit mo\v{z}e u nekom trenutku zauzeti taj resurs. Ukoliko je nit usmerena od \v{c}vora resursa ka \v{c}voru niti ($\textrm{nit}\leftarrow \textrm{resurs}$), data nit je zauzela resurs i trenutno ga dr\v{z}i. Ukoliko se u grafu pojavi \textbf{petlja}, nastaje \textlat{deadlock}. 
+Primer grafa alokacije resursa:
+\begin{figure}[h]
+\centering
+\begin{subfigure}[b]{0.4\linewidth}    
+\centering
+\tikz[>={Stealth[round,sep]}]
+  \graph [simple necklace layout, node sep=1em,
+          nodes={draw,circle}, math nodes]
+  {
+        p_1 -> f_1 [rectangle] <- p_2 -> f_2 [rectangle] <- p_3 -> f_3 [rectangle] <- p_4 -> f_4 [rectangle] <- p_5 -> f_5 [rectangle] <- p_1
+    };%
+    \caption{Graf filozofa}
+\end{subfigure}
+\begin{subfigure}[b]{0.4\linewidth}    
+\centering
+\tikz[>={Stealth[round,sep]}]
+  \graph [simple necklace layout, node sep=1em,
+          nodes={draw,circle}, math nodes]
+  {
+        p_1 -> f_1 [rectangle] -> p_2 -> f_2 [rectangle] -> p_3 -> f_3 [rectangle] -> p_4 -> f_4 [rectangle] -> p_5 -> f_5 [rectangle] -> p_1
+    };%
+    \caption{\textlat{Deadlock} filozofa}
+\end{subfigure}
+\end{figure}
+\\
+\textbf{\large 1. na\v{c}in}\\
+Mo\v{z}emo obrnuti redosled uzimanja vilju\v{s}aka jednog filozofa (ili parnih filozofa) i time otkloniti mogu\'{c}nost pojave petlje u grafu alokacije resursa. 
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+Sem forks[N] = { 1, 1, 1, 1, 1 };
+void phil(int id) {
+    int right = (id + 1) % N;
+    int left = (id == 0) ? (N - 1) : (id - 1); // alternative: `int left = id;`
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        if (id % 2 == 0) { // alternative: `if (id == 0)`
+            wait(forks[left]);
+            wait(forks[right]);
+        } else {
+            wait(forks[right]);
+            wait(forks[left]);
+        }
+        // Eat
+        eat();
+        // Release forks 
+        signal(forks[left]);
+        signal(forks[right]);
+    }
+}
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+\end{lstlisting}
+\textbf{\large 2. na\v{c}in}\\
+Mo\v{z}emo napraviti uposleno \v{c}ekanje i zauzeti vilju\v{s}ke kada postanu slobodne (\textbf{Napomena:} Uposleno \v{c}ekanje je neefikasno i kada su na raspolaganju semafori, obi\v{c}no je lo\v{s}e praviti uposleno \v{c}ekanje ukoliko ono nije neophodno)
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+Sem mutex = 1;
+bool avail[] = { true, true, true, true, true };
+
+void phil(int id) {
+    int right = (id + 1) % N;
+    int left = (id == 0) ? (N - 1) : (id - 1);
+    while (true) {
+        // Think
+        think();
+		// Acquire forks
+		while (true) {
+            wait(mutex);
+            if (avail[left] && avail[right])  {
+                avail[left] = false;
+                avail[right] = false;
+                signal(mutex);
+                break;
+            } else {
+                signal(mutex);
+                usleep(50);
+            }
+        }
+        // Eat
+        eat();
+		// Release forks
+		wait(mutex);
+        avail[left] = true;
+        avail[right] = true;
+        signal(mutex);
+    }
+}
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}
+\textbf{\large 3. na\v{c}in}\\
+Mo\v{z}emo imati semafor \texttt{ticket}  inicijalizovan na vrednost $N - 1$, ukoliko je $N$ broj filozofa. Tako poslednji filozof ne mo\v{z}e da zahteva vilju\v{s}ke ukoliko $N-1$ filozofa pre zahtevalo vilj\v{s}ke, pa se ne mo\v{z}e javiti petlja.
+
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+
+Sem sFork[N] = { 1, 1, 1, 1, 1 };
+Sem ticket = 4;
+
+int phil(int id) 
+{
+    int left = id;
+    int right = (id + 1) % N;
+    while (true) {
+        // Think
+		think();
+		// Acquire forks
+        wait(ticket);
+        wait(sFork[left]);
+        wait(sFork[right]);
+        // Eat
+		eat();
+		// Release forks
+        signal(sFork[left]);
+        signal(sFork[right]);
+        signal(ticket);
+    }
+}
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++)
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++)
+        join(tp[i]);
+    return 0;
+}
+\end{lstlisting}
+\textbf{\large 4. na\v{c}in}\\
+Mo\v{z}emo koristiti privatne semafore filozofa na koji \'{c}e se filozof blokirati ukoliko ne mo\v{z}e da uzme vilju\v{s}ke. Filozof mora da najavi da nije uspeo da uzme vilju\v{s}ke (preko \texttt{hungry[]}) kako bi filozof koji osloba\dj{}a vilju\v{s}ke znao da li treba da poku\v{s}a da deblokira filozofa levo ili desno pored sebe.
+\begin{lstlisting}
+#include <thread.h>
+#include <sem.h>
+#define N 5
+#define LEFT(id) (((id) + 1) %  N)
+#define RIGHT(id) (((id) == 0) ? (N - 1) : ((id) - 1))
+#define CAN_EAT(id) (available[LEFT(id)] && available[RIGHT(id)])
+Sem mutex = 1;
+Sem privs[] = { 0, 0, 0, 0, 0 };
+bool available[] = { true, true, true, true, true };
+bool hungry[] = { false, false, false, false, false };
+
+void phil(int id) 
+{
+    int left = LEFT(id);
+    int right = RIGHT(id);
+    while (true) {
+        // Think
+        think();
+        // Acquire forks
+        wait(mutex);
+        if (! CAN_EAT(id)) {
+            hungry[id] = true;
+            signal(mutex);
+            wait(privs[id]);
+        }
+        hungry[id] = false;
+        available[left] = false;
+        available[right] = false;
+        signal(mutex);
+        // Eat
+        eat();
+        // Release forks
+        wait(mutex);
+        available[left] = true;
+        available[right] = true;
+        if (hungry[left] && CAN_EAT(left)) {
+            signal(privs[left]);
+        } else if (hungry[right] && CAN_EAT(right)) {
+            signal(privs[right]);
+        } else {
+            signal(mutex);
+        }
+    }
+}
+int main() {
+    Thread tp[N];
+    for (int i = 0; i < N; i++) 
+        tp[i] = createThread(phil, i);
+    for (int i = 0; i < N; i++) 
+        join(tp[i]);
+    return 0;
+}
+
+\end{lstlisting}

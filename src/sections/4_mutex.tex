@@ -1,0 +1,116 @@
+\clearpage
+\section{\latin Mutual exclusion}
+\textbf{\large Zadatak} Proces je pokrenuo dve niti, gde obe rade neki posao \texttt{work()} koji se mora obavljati sa ekskluzivnim pravom pristupa (npr. upis u fajl). Obezbediti ovaj vid sinhronizacije pomo\'{c}u monitora. 
+\\\\
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Wait} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+class CriticalSection : SW_Monitor {
+    bool m_locked = false;
+    cond m_delay;
+public:
+    CriticalSection() : m_delay(this) {
+
+    }
+    void enter_section() {
+        monitor {
+            if (m_locked) 
+                m_delay.wait();
+            m_locked = true;
+        }
+    }
+
+    void exit_section() {
+        monitor {
+            m_locked = false;
+            m_delay.signal();
+        }
+    }
+
+} cs;
+
+char buffer[BUFSIZ];
+void a() {
+    while (true) {
+        cs.enter_section();
+        memset(buffer, 'a', BUFSIZ);
+        cs.exit_section();
+        usleep(100);
+    }
+}
+
+void b() {
+    while (true) {
+        cs.enter_section();
+        memset(buffer, 'b', BUFSIZ);
+        cs.exit_section();
+        usleep(10);
+    }
+}
+
+int main() {
+    Thread ta = createThread(a);
+    Thread tb = createThread(b);
+    join(ta);
+    join(tb);
+    return 0;
+}
+
+\end{lstlisting}
+\newpage
+\textbf{Re\v{s}enje sa \texttt{Signal-and-Continue} disciplinom}
+\begin{lstlisting}
+#include <thread.h>
+#include <monitor.h>
+
+class CriticalSection : SC_Monitor {
+    bool m_locked = false;
+    cond m_delay;
+public:
+    CriticalSection() : m_delay(this) {
+
+    }
+    void enter_section() {
+        monitor {
+            while (m_locked) 
+                m_delay.wait();
+            m_locked = true;
+        }
+    }
+
+    void exit_section() {
+        monitor {
+            m_locked = false;
+            m_delay.signal();
+        }
+    }
+
+} cs;
+
+char buffer[BUFSIZ];
+void a() {
+    while (true) {
+        cs.enter_section();
+        memset(buffer, 'a', BUFSIZ);
+        cs.exit_section();
+    }
+}
+
+void b() {
+    while (true) {
+        cs.enter_section();
+        memset(buffer, 'b', BUFSIZ);
+        cs.exit_section();
+    }
+}
+
+int main() {
+    Thread ta = createThread(a);
+    Thread tb = createThread(b);
+    join(ta);
+    join(tb);
+    return 0;
+}
+
+\end{lstlisting}

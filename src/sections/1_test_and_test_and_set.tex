@@ -1,0 +1,23 @@
+\clearpage
+\section{\textlat{Test-and-Test-and-Set} algoritam}
+Kod \textbf{\textlat{Test-and-test-and-set}} algoritma vrednost globalne brave se najpre proverava iz ke\v{s} memorije. Ukoliko je vrednost brave ``zaklju\v{c}ano'', nit vr\v{s}i uposleno \v{c}ekanje u unutra\v{s}njoj niti gde se vrednost globalne brave \texttt{lock} dohvata iz ke\v{s} memorije. Ukoliko nit koja je u kriti\v{c}noj sekciji napusti kriti\v{c}nu sekciju pozivom \texttt{lock = false;}, sve niti koje su bile na uposlenom \v{c}ekanju u unutra\v{s}njoj petlji \'{c}e probati da zaklju\v{c}aju bravu i udju u kriti\v{c}nu sekciju sa  \texttt{while (test\_and\_set(\&lock))}. Jedna od niti \'{c}e uspeti da udje u kriti\v{c}nu sekciju, dok \'{c}e se ostale niti vratiti na uposleno \v{c}ekanje u unutra\v{s}njoj petlji.
+\begin{lstlisting}
+volatile bool lock = false;
+
+void thread(int id)
+{
+    while (true) {
+		/* LOCK */
+        do {
+			while (lock)
+				skip();
+		} while (test_and_set(&lock));
+		/* CRITICAL SECTION */
+		work();
+		/* UNLOCK */
+		lock = false;
+		/* NON-CRITICAL SECTION */
+        usleep(50);
+    }
+}
+\end{lstlisting}

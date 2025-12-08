@@ -10,23 +10,23 @@
 #define N 5
 
 class SJN : SW_Monitor {
-    bool m_locked = false;
-    cond m_delay;
+    bool locked = false;
+    cond delay;
 public:
-    SJN() : m_delay(this) {
+    SJN() : delay(this) {
         // empty
     }
     void enter_section(int prio) {
         monitor {
-            if (m_locked) 
-                m_delay.wait(prio);
-            m_locked = true;
+            if (locked) 
+                delay.wait(prio);
+            locked = true;
         }
     }
     void exit_section() {
         monitor {
-            m_locked = false;
-            m_delay.signal();
+            locked = false;
+            delay.signal();
         }
     }
 } sjn;
@@ -59,23 +59,23 @@ int main() {
 #define N 5
 
 class SJN : SC_Monitor {
-    bool m_locked = false;
-    cond m_delay;
+    bool locked = false;
+    cond delay;
 public:
-    SJN() : m_delay(this) {
+    SJN() : delay(this) {
         // empty
     }
     void enter_section(int prio) {
         monitor {
-            if (m_locked || m_delay.queue()) 
-                m_delay.wait(prio);
-            m_locked = true;
+            if (locked || delay.queue()) 
+                delay.wait(prio);
+            locked = true;
         }
     }
     void exit_section() {
         monitor {
-            m_locked = false;
-            m_delay.signal();
+            locked = false;
+            delay.signal();
         }
     }
 } sjn;

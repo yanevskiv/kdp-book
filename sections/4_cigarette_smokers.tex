@@ -17,42 +17,42 @@ enum {
     TOBACCO = 2
 };
 class Table : SW_Monitor {
-    bool m_items[ITEM_COUNT] = { false, false, false };
-    cond m_waitForItems[ITEM_COUNT];
-    bool m_ok = false;
-    cond m_waitForOk;
+    bool items[ITEM_COUNT] = { false, false, false };
+    cond waitForItems[ITEM_COUNT];
+    bool ok = false;
+    cond waitForOk;
 public:
-    Table() : m_waitForItems((cond[]){this, this, this}), m_waitForOk(this) {
+    Table() : waitForItems((cond[]){this, this, this}), waitForOk(this) {
         // empty
     }
     void put_items(int item1, int item2) {
         monitor {
             int third = THIRD_ITEM(item1, item2);
-            m_items[item1] = true;
-            m_items[item2] = true;
-            m_waitForItems[third].signal();
+            items[item1] = true;
+            items[item2] = true;
+            waitForItems[third].signal();
         }
     }
     void get_items(int item1, int item2) {
         monitor {
             int third = THIRD_ITEM(item1, item2);
-            if (! m_items[item1] || ! m_items[item2]) 
-                m_waitForItems[third].wait();
-            m_items[item1] = false;
-            m_items[item2] = false;
+            if (! items[item1] || ! items[item2]) 
+                waitForItems[third].wait();
+            items[item1] = false;
+            items[item2] = false;
         }
     }
     void wait_ok() {
         monitor {
-            if (! m_ok)
-                m_waitForOk.wait();
-            m_ok = false;
+            if (! ok)
+                waitForOk.wait();
+            ok = false;
         }
     }
     void signal_ok() {
         monitor {
-            m_ok = true;
-            m_waitForOk.signal();
+            ok = true;
+            waitForOk.signal();
         }
     }
 } table;

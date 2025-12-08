@@ -100,7 +100,7 @@ class SW_Monitor {
 		if (! qWait.empty()) {
 			signal(qWait.pop());
 		} else {
-			signal(m_mutex);
+			signal(mutex);
 		}
 	}
 	class cond {

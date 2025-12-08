@@ -14,21 +14,21 @@ class CS : public CriticalSection {
 } cs;
 
 class Barrier : SW_Monitor {
-    int m_count = 0;
-    cond m_barrier;
+    int count = 0;
+    cond barrier;
 public:
-    Barrier() : m_barrier(this) {
+    Barrier() : barrier(this) {
         // empty
     }
     void wait_barrier() {
         monitor {
-            m_count += 1;
-            if (m_count == N) {
-                m_count = 0;
-                m_barrier.signal();
+            count += 1;
+            if (count == N) {
+                count = 0;
+                barrier.signal();
             } else {
-                m_barrier.wait();
-                m_barrier.signal();
+                barrier.wait();
+                barrier.signal();
             }
         }
     }
@@ -68,20 +68,20 @@ class CS : public CriticalSection {
     ...
 } cs;
 class Barrier : SC_Monitor {
-    int m_count = 0;
-    cond m_barrier;
+    int count = 0;
+    cond barrier;
 public:
-    Barrier() : m_barrier(this) {
+    Barrier() : barrier(this) {
         // empty
     }
     void wait_barrier() {
         monitor {
-            m_count += 1;
-            if (m_count == B) {
-                m_count = 0;
-                m_barrier.signalAll();
+            count += 1;
+            if (count == B) {
+                count = 0;
+                barrier.signalAll();
             } else {
-                m_barrier.wait();
+                barrier.wait();
             }
         }
     }

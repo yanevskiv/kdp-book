@@ -10,34 +10,34 @@
 #define B 10
 
 class Buffer_Monitor : SW_Monitor {
-    int m_data[B];
-    int m_head = 0;
-    int m_tail = 0;
-    int m_count = 0;
-    cond m_full;
-    cond m_empty;
+    int data[B];
+    int head = 0;
+    int tail = 0;
+    int count = 0;
+    cond full;
+    cond empty;
 public:
-    Buffer_Monitor () : m_full(this), m_empty(this) {
+    Buffer_Monitor () : full(this), empty(this) {
         // empty
     }
-    void put_data(int data) {
+    void put_data(int value) {
         monitor {
-            if (m_count == B)
-                m_full.wait();
-            m_data[m_head] = data;
-            m_head = (m_head + 1) % B;
-            m_count += 1;
-            m_empty.signal();
+            if (count == B)
+                full.wait();
+            data[head] = value;
+            head = (head + 1) % B;
+            count += 1;
+            empty.signal();
         }
     }
     int get_data() {
         monitor {
-            if (m_count == 0)
-                m_empty.wait();
-            int result = m_data[m_tail];
-            m_tail = (m_tail + 1) % B;
-            m_count -= 1;
-            m_full.signal();
+            if (count == 0)
+                empty.wait();
+            int result = data[tail];
+            tail = (tail + 1) % B;
+            count -= 1;
+            full.signal();
             return result;
         }
     }
@@ -78,34 +78,34 @@ int main() {
 #define B 10
 
 class Buffer_Monitor : SC_Monitor {
-    int m_data[B];
-    int m_head = 0;
-    int m_tail = 0;
-    int m_count = 0;
-    cond m_full;
-    cond m_empty;
+    int data[B];
+    int head = 0;
+    int tail = 0;
+    int count = 0;
+    cond full;
+    cond empty;
 public:
-    Buffer_Monitor () : m_full(this), m_empty(this) {
+    Buffer_Monitor () : full(this), empty(this) {
         // empty
     }
-    void put_data(int data) {
+    void put_data(int value) {
         monitor {
-            while (m_count == B)
-                m_full.wait();
-            m_data[m_head] = data;
-            m_head = (m_head + 1) % B;
-            m_count += 1;
-            m_empty.signal();
+            while (count == B)
+                full.wait();
+            data[head] = value;
+            head = (head + 1) % B;
+            count += 1;
+            empty.signal();
         }
     }
     int get_data() {
         monitor {
-            while (m_count == 0)
-                m_empty.wait();
-            int result = m_data[m_tail];
-            m_tail = (m_tail + 1) % B;
-            m_count -= 1;
-            m_full.signal();
+            while (count == 0)
+                empty.wait();
+            int result = data[tail];
+            tail = (tail + 1) % B;
+            count -= 1;
+            full.signal();
             return result;
         }
     }

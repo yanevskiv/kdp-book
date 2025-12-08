@@ -7,24 +7,24 @@
 #include <thread.h>
 #include <monitor.h>
 class CriticalSection : SW_Monitor {
-    bool m_locked = false;
-    cond m_delay;
+    bool locked = false;
+    cond delay;
 public:
-    CriticalSection() : m_delay(this) {
+    CriticalSection() : delay(this) {
 
     }
     void enter_section() {
         monitor {
-            if (m_locked) 
-                m_delay.wait();
-            m_locked = true;
+            if (locked) 
+                delay.wait();
+            locked = true;
         }
     }
 
     void exit_section() {
         monitor {
-            m_locked = false;
-            m_delay.signal();
+            locked = false;
+            delay.signal();
         }
     }
 
@@ -65,24 +65,24 @@ int main() {
 #include <monitor.h>
 
 class CriticalSection : SC_Monitor {
-    bool m_locked = false;
-    cond m_delay;
+    bool locked = false;
+    cond delay;
 public:
-    CriticalSection() : m_delay(this) {
+    CriticalSection() : delay(this) {
 
     }
     void enter_section() {
         monitor {
-            while (m_locked) 
-                m_delay.wait();
-            m_locked = true;
+            while (locked) 
+                delay.wait();
+            locked = true;
         }
     }
 
     void exit_section() {
         monitor {
-            m_locked = false;
-            m_delay.signal();
+            locked = false;
+            delay.signal();
         }
     }
 

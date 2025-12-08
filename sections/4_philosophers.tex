@@ -14,24 +14,24 @@ Re\v{s}enje gde obr\'{c}emo uzimanja vilju\v{s}aka redosled parnim filozofa.
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SW_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    cond m_waitForFork[N];
+    bool forkFree[N] = { true, true, true, true, true };
+    cond waitForFork[N];
 public:
-    Table() : m_waitForFork {this, this, this, this, this} {
+    Table() : waitForFork {this, this, this, this, this} {
         
     }
     void acquire_fork(int which) {
         monitor {
-            if (! m_forkFree[which]) 
-                m_waitForFork[which].wait();
-            m_forkFree[which] = false;
+            if (! forkFree[which]) 
+                waitForFork[which].wait();
+            forkFree[which] = false;
         }
     }
 
     void release_fork(int which) {
         monitor {
-            m_forkFree[which] = true;
-            m_waitForFork[which].signal();
+            forkFree[which] = true;
+            waitForFork[which].signal();
         }
     }
 } table;
@@ -77,48 +77,48 @@ int main() {
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SC_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    bool m_needFork[N] = { false, false, false, false, false};
-    int  m_ticket = N - 1;
-    cond m_waitForFork[N];
-    cond m_waitForTicket;
+    bool forkFree[N] = { true, true, true, true, true };
+    bool needFork[N] = { false, false, false, false, false};
+    int  ticket = N - 1;
+    cond waitForFork[N];
+    cond waitForTicket;
 public:
     Table() 
-        : m_waitForFork {this, this, this, this, this}
-        , m_waitForTicket {this} {
+        : waitForFork {this, this, this, this, this}
+        , waitForTicket {this} {
         
     }
     void acquire_fork(int which) {
         monitor {
-            if (! m_forkFree[which]) {
-                m_needFork[which] = true;
-                m_waitForFork[which].wait();
+            if (! forkFree[which]) {
+                needFork[which] = true;
+                waitForFork[which].wait();
             } else {
-                m_forkFree[which] = false;
+                forkFree[which] = false;
             }
         }
     }
     void release_fork(int which) {
         monitor {
-            m_forkFree[which] = true;
-            if (m_needFork[which]) {
-                m_forkFree[which] = false;
-                m_needFork[which] = false;
-                m_waitForFork[which].signal();
+            forkFree[which] = true;
+            if (needFork[which]) {
+                forkFree[which] = false;
+                needFork[which] = false;
+                waitForFork[which].signal();
             }
         }
     }
     void acquire_ticket() {
         monitor {
-            while (m_ticket == 0)
-                m_waitForTicket.wait();
-            m_ticket -= 1;
+            while (ticket == 0)
+                waitForTicket.wait();
+            ticket -= 1;
         }
     }
     void release_ticket() {
         monitor {
-            m_ticket += 1;
-            m_waitForTicket.signal();
+            ticket += 1;
+            waitForTicket.signal();
         }
     }
 } table;
@@ -165,41 +165,41 @@ Re\v{s}enje gde imamo ``\textlat{ticket}'' inicijalizovan na $N-1$, gde je $N$ b
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SW_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    bool m_needFork[N] = { false, false, false, false, false};
-    int  m_ticket = N - 1;
-    cond m_waitForFork[N];
-    cond m_waitForTicket;
+    bool forkFree[N] = { true, true, true, true, true };
+    bool needFork[N] = { false, false, false, false, false};
+    int  ticket = N - 1;
+    cond waitForFork[N];
+    cond waitForTicket;
 public:
     Table() 
-        : m_waitForFork {this, this, this, this, this}
-        , m_waitForTicket {this} {
+        : waitForFork {this, this, this, this, this}
+        , waitForTicket {this} {
         
     }
     void acquire_fork(int which) {
         monitor {
-            if (! m_forkFree[which])
-                m_waitForFork[which].wait();
-            m_forkFree[which] = false;
+            if (! forkFree[which])
+                waitForFork[which].wait();
+            forkFree[which] = false;
         }
     }
     void release_fork(int which) {
         monitor {
-            m_forkFree[which] = true;
-            m_waitForFork[which].signal();
+            forkFree[which] = true;
+            waitForFork[which].signal();
         }
     }
     void acquire_ticket() {
         monitor {
-            if (m_ticket == 0)
-                m_waitForTicket.wait();
-            m_ticket -= 1;
+            if (ticket == 0)
+                waitForTicket.wait();
+            ticket -= 1;
         }
     }
     void release_ticket() {
         monitor {
-            m_ticket += 1;
-            m_waitForTicket.signal();
+            ticket += 1;
+            waitForTicket.signal();
         }
     }
 } table;
@@ -242,48 +242,48 @@ int main() {
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SC_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    bool m_needFork[N] = { false, false, false, false, false};
-    int  m_ticket = N - 1;
-    cond m_waitForFork[N];
-    cond m_waitForTicket;
+    bool forkFree[N] = { true, true, true, true, true };
+    bool needFork[N] = { false, false, false, false, false};
+    int  ticket = N - 1;
+    cond waitForFork[N];
+    cond waitForTicket;
 public:
     Table() 
-        : m_waitForFork {this, this, this, this, this}
-        , m_waitForTicket {this} {
+        : waitForFork {this, this, this, this, this}
+        , waitForTicket {this} {
         
     }
     void acquire_fork(int which) {
         monitor {
-            if (! m_forkFree[which]) {
-                m_needFork[which] = true;
-                m_waitForFork[which].wait();
+            if (! forkFree[which]) {
+                needFork[which] = true;
+                waitForFork[which].wait();
             } else {
-                m_forkFree[which] = false;
+                forkFree[which] = false;
             }
         }
     }
     void release_fork(int which) {
         monitor {
-            m_forkFree[which] = true;
-            if (m_needFork[which]) {
-                m_forkFree[which] = false;
-                m_needFork[which] = false;
-                m_waitForFork[which].signal();
+            forkFree[which] = true;
+            if (needFork[which]) {
+                forkFree[which] = false;
+                needFork[which] = false;
+                waitForFork[which].signal();
             }
         }
     }
     void acquire_ticket() {
         monitor {
-            while (m_ticket == 0)
-                m_waitForTicket.wait();
-            m_ticket -= 1;
+            while (ticket == 0)
+                waitForTicket.wait();
+            ticket -= 1;
         }
     }
     void release_ticket() {
         monitor {
-            m_ticket += 1;
-            m_waitForTicket.signal();
+            ticket += 1;
+            waitForTicket.signal();
         }
     }
 } table;
@@ -330,34 +330,34 @@ Re\v{s}enje gde uzimamo obe vilju\v{s}ke u isto vreme i vra\'{c}amo obe vilju\v{
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SW_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    bool m_hungry[N] = { false, false, false, false, false };
-    cond m_waitForForks[N];
+    bool forkFree[N] = { true, true, true, true, true };
+    bool hungry[N] = { false, false, false, false, false };
+    cond waitForForks[N];
 public:
-    Table() : m_waitForForks {this, this, this, this, this} {
+    Table() : waitForForks {this, this, this, this, this} {
         
     }
     void acquire_forks(int left, int right) {
         monitor {
             int id = RIGHT(left); // same as LEFT(right)
-            if (! (m_forkFree[left] && m_forkFree[right])) {
-                m_hungry[id] = true;
-                m_waitForForks[id].wait();
+            if (! (forkFree[left] && forkFree[right])) {
+                hungry[id] = true;
+                waitForForks[id].wait();
             }
-            m_hungry[id] = false;
-            m_forkFree[left] = false;
-            m_forkFree[right] = false;
+            hungry[id] = false;
+            forkFree[left] = false;
+            forkFree[right] = false;
         }
     }
 
     void release_forks(int left, int right) {
         monitor {
-            m_forkFree[left] = true;
-            m_forkFree[right] = true;
-            if (m_hungry[left] && m_forkFree[LEFT(left)])  {
-                m_waitForForks[left].signal();
-            } else if (m_hungry[right] && m_forkFree[RIGHT(right)]) {
-                m_waitForForks[right].signal();
+            forkFree[left] = true;
+            forkFree[right] = true;
+            if (hungry[left] && forkFree[LEFT(left)])  {
+                waitForForks[left].signal();
+            } else if (hungry[right] && forkFree[RIGHT(right)]) {
+                waitForForks[right].signal();
             }
         }
     }
@@ -397,40 +397,40 @@ int main() {
 #define RIGHT(id) (((id) + 1) % N)
 
 class Table : SC_Monitor {
-    bool m_forkFree[N] = { true, true, true, true, true };
-    bool m_hungry[N] = { false, false, false, false, false };
-    cond m_waitForForks[N];
+    bool forkFree[N] = { true, true, true, true, true };
+    bool hungry[N] = { false, false, false, false, false };
+    cond waitForForks[N];
 public:
-    Table() : m_waitForForks {this, this, this, this, this} {
+    Table() : waitForForks {this, this, this, this, this} {
         
     }
     void acquire_forks(int left, int right) {
         monitor {
             int id = RIGHT(left); // same as LEFT(right)
-            if (! (m_forkFree[left] && m_forkFree[right])) {
-                m_hungry[id] = true;
-                m_waitForForks[id].wait();
+            if (! (forkFree[left] && forkFree[right])) {
+                hungry[id] = true;
+                waitForForks[id].wait();
             } else {
-                m_forkFree[left] = false;
-                m_forkFree[right] = false;
+                forkFree[left] = false;
+                forkFree[right] = false;
             }
         }
     }
 
     void release_forks(int left, int right) {
         monitor {
-            m_forkFree[left] = true;
-            m_forkFree[right] = true;
-            if (m_hungry[left] && m_forkFree[LEFT(left)])  {
-                m_hungry[left] = false;
-                m_forkFree[left] = false;
-                m_forkFree[LEFT(left)] = false;
-                m_waitForForks[left].signal();
-            } else if (m_hungry[right] && m_forkFree[RIGHT(right)]) {
-                m_hungry[right] = false;
-                m_forkFree[right] = false;
-                m_forkFree[RIGHT(right)] = false;
-                m_waitForForks[right].signal();
+            forkFree[left] = true;
+            forkFree[right] = true;
+            if (hungry[left] && forkFree[LEFT(left)])  {
+                hungry[left] = false;
+                forkFree[left] = false;
+                forkFree[LEFT(left)] = false;
+                waitForForks[left].signal();
+            } else if (hungry[right] && forkFree[RIGHT(right)]) {
+                hungry[right] = false;
+                forkFree[right] = false;
+                forkFree[RIGHT(right)] = false;
+                waitForForks[right].signal();
             }
         }
     }

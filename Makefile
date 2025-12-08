@@ -1,29 +1,20 @@
-# Makefile for LaTeX book project
-# Builds KDP_book.pdf from sources in src/ directory
+.PHONY: all clean
 
-# Main source file
-MAIN = src/main
-OUTPUT = KDP_book.pdf
+# Output PDF name
+OUTPUT = MT-book.pdf
 
-# LaTeX compiler (using lualatex as specified in main.tex)
-LATEX = lualatex
-LATEX_FLAGS = -interaction=nonstopmode -output-directory=.
+# Main LaTeX file
+MAIN = main.tex
 
 # Default target
 all: $(OUTPUT)
 
-# Build the PDF
-$(OUTPUT): $(MAIN).tex $(wildcard src/sections/*.tex)
-	$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
-	$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
-	mv main.pdf $(OUTPUT)
+# Compile LaTeX to PDF with renamed output
+$(OUTPUT): $(MAIN)
+	lualatex -jobname=MT-book main.tex
+	lualatex -jobname=MT-book main.tex
 
 # Clean auxiliary files
 clean:
-	rm -f *.aux *.log *.out *.toc
-
-# Clean everything including the PDF
-distclean: clean
-	rm -f $(OUTPUT)
-
-.PHONY: all clean distclean
+	rm -f *.aux *.log *.out *.toc *.lof *.lot *.fls *.fdb_latexmk *.synctex.gz
+	rm -f MT-book.pdf

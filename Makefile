@@ -4,15 +4,15 @@
 OUTPUT = KDP-book.pdf
 
 # Main LaTeX file
-MAIN = main.tex
+MAIN = src/main.tex
 
 # Default target
 all: $(OUTPUT)
 
 # Compile LaTeX to PDF with renamed output
 $(OUTPUT): $(MAIN)
-	lualatex -jobname=KDP-book main.tex
-	lualatex -jobname=KDP-book main.tex
+	lualatex -jobname=KDP-book $(MAIN)
+	lualatex -jobname=KDP-book $(MAIN)
 
 # Clean auxiliary files
 clean:

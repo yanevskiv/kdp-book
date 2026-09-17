@@ -1,5 +1,5 @@
 # KDP Book
-This is a small illustrative booklet on the topic of concurrent programming.  It's written in LuaLaTeX.
+This is a small illustrative booklet on the topic of concurrent programming.  It's written in Markdown and built with pandoc (LuaLaTeX).
 
 The goal I had with this booklet is to illustrate many of the classic problems in concurrent programming using different synchronization primitives and techniques.
 

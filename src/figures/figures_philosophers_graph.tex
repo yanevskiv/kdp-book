@@ -1,0 +1,14 @@
+% !TeX program = lualatex
+% (c) Ivan Janevski
+\documentclass[border=2pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,graphs,graphdrawing}
+\usegdlibrary{circular}
+\begin{document}
+\tikz[>={Stealth[round,sep]}]
+  \graph [simple necklace layout, node sep=1em,
+          nodes={draw,circle}, math nodes]
+  {
+        p_1 -> f_1 [rectangle] <- p_2 -> f_2 [rectangle] <- p_3 -> f_3 [rectangle] <- p_4 -> f_4 [rectangle] <- p_5 -> f_5 [rectangle] <- p_1
+  };
+\end{document}

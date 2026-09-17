@@ -1,0 +1,37 @@
+title: Konkurentno i distribuirano programiranje - skripta za kolokvijumski deo
+author: Ivan Janevski
+date: ""
+lang: sr-Latn
+# pandoc maps sr-Latn to babel "serbian", whose captions are Cyrillic
+babel-lang: serbian-latin
+
+documentclass: report
+geometry:
+  - a4paper
+  - margin=2.5cm
+
+# Fonts, any font installed on the system (see `fc-list : family`)
+mainfont: CMU Serif
+monofont: TeX Gyre Cursor
+
+toc: true
+toc-depth: 1
+numbersections: true
+secnumdepth: 1
+# Keeps pandoc from redefining \paragraph, which clashes with titlesec
+subparagraph: true
+
+include-before: |
+  ```{=latex}
+  \thispagestyle{empty}
+  \vspace*{\fill}
+  \begin{center}
+  ```
+
+  Ova skripta je otvorenog koda (GNU Free Documentation License) čiji se izvorišni kod napisan u LaTeX-u može naći na sledećem linku\
+  <https://github.com/yanevskiv/notes/tree/master/2022/kdp>
+
+  ```{=latex}
+  \end{center}
+  \vspace*{\fill}
+  ```

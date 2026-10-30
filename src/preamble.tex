@@ -1,19 +1,51 @@
 % (c) Ivan Janevski
 \usepackage{listings}
 \usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{newunicodechar}
 
-\definecolor{kdp-background}{RGB}{250, 250, 250}
-\definecolor{kdp-preprocess}{RGB}{128, 64, 0}
-\definecolor{kdp-comment}{RGB}{128, 128, 128}
-\definecolor{kdp-numbers}{RGB}{128, 128, 128}
-\definecolor{kdp-string}{rgb}{0.58,0,0.82}
-\definecolor{kdp-keyword}{RGB}{0, 0, 255}
-\definecolor{kdp-special}{RGB}{220, 100, 40}
+% Ubuntu lacks these arrows; use the document's math font for them.
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+\newunicodechar{←}{\ensuremath{\leftarrow}}
+
+% Warm paper tones and orange accents, inspired by the x86-64 book.
+\definecolor{kdp-charcoal}{HTML}{2A2A2A}
+\definecolor{kdp-accent}{HTML}{E85D3F}
+\definecolor{kdp-background}{HTML}{F7F6F1}
+\definecolor{kdp-rule}{HTML}{E2E0D8}
+\definecolor{kdp-preprocess}{HTML}{9A4A0B}
+\definecolor{kdp-comment}{HTML}{6E7B6E}
+\definecolor{kdp-numbers}{HTML}{77756E}
+\definecolor{kdp-string}{HTML}{275F2C}
+\definecolor{kdp-keyword}{HTML}{2A2A2A}
+\definecolor{kdp-special}{HTML}{B44129}
+
+\AtBeginDocument{\color{kdp-charcoal}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 2pt}
+\linespread{1.04}
+\raggedbottom
+\setlist{leftmargin=*, topsep=4pt, itemsep=2pt, parsep=0pt}
+\captionsetup{font=small, labelfont={bf,color=kdp-special}, skip=6pt}
+
+% Fenced Markdown blocks reach this style through tools/listings.lua.
 \lstdefinestyle{kdp-style}{
     language=C++,
+    basicstyle=\ttfamily\footnotesize\color{kdp-charcoal},
+    backgroundcolor=\color{kdp-background},
+    frame=single,
+    rulecolor=\color{kdp-rule},
+    framerule=0.4pt,
+    framesep=7pt,
+    xleftmargin=8pt,
+    xrightmargin=8pt,
+    aboveskip=10pt,
+    belowskip=10pt,
     commentstyle=\color{kdp-comment},
     morecomment=[l][\color{kdp-preprocess}]{\#},
-    keywordstyle=\color{kdp-keyword},
+    keywordstyle=\bfseries\color{kdp-keyword},
     keywordstyle=[2]\bfseries\color{kdp-special},
     numberstyle=\tiny\color{kdp-numbers},
     stringstyle=\color{kdp-string},
@@ -31,10 +63,62 @@
     morekeywords=[2]{fetch_and_add, get_and_set, test_and_set, signal, wait, region, await, cond, signalAll, signal_all, monitor, in, inp, rd, rdp, out, eval, mbx_put, mbx_get},
     columns=fixed
 }
-\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true}
 \lstset{style=kdp-style}
 
-\titleformat{\chapter}[hang]{\normalfont\bfseries\Huge}{\thechapter}{0.3em}{}
-\titleformat{\section}[hang]{\normalfont\bfseries\Large}{\thesection}{0.3em}{}
+% Markdown # / ## / ### become chapter / section / subsection.
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\color{kdp-charcoal}}
+  {\fontsize{36}{40}\selectfont\color{kdp-accent}\thechapter}
+  {10pt}
+  {\fontsize{26}{31}\selectfont\raggedright}
+  [\vspace{8pt}{\color{kdp-accent}\titlerule[1.2pt]}]
+\titlespacing*{\chapter}{0pt}{0pt}{22pt}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{kdp-charcoal}}
+  {\textcolor{kdp-accent}{\thesection}}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{7pt}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{kdp-charcoal}}
+  {\textcolor{kdp-accent}{\thesubsection}}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{5pt}
 % Every section starts on a new page, except the first one in a chapter
 \newcommand{\sectionbreak}{\ifnum\value{section}>0 \clearpage\fi}
+
+% Chapter title on the left, author and book label on the right.
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter\enspace #1}{}}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{kdp-numbers}\nouppercase{\leftmark}}
+\fancyhead[R]{\small\color{kdp-numbers}Ivan Janevski | Skripta za KDP}
+\fancyfoot[C]{\small\color{kdp-charcoal}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\headrule}{\begingroup\color{kdp-rule}%
+  \hrule width\headwidth height\headrulewidth\endgroup}
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\small\color{kdp-charcoal}\thepage}
+  \renewcommand{\headrulewidth}{0pt}}
+
+% Use Pandoc's title/author metadata without replacing its document template.
+\makeatletter
+% Ubuntu's three-digit page numbers need more room in the contents.
+\renewcommand{\@pnumwidth}{2.2em}
+\renewcommand{\@tocrmarg}{3.2em}
+\renewcommand{\maketitle}{%
+  \hypersetup{pageanchor=false}
+  \begin{titlepage}
+    \thispagestyle{empty}
+    \raggedright
+    \vspace*{0.12\textheight}
+    {\color{kdp-accent}\rule{0.18\textwidth}{2pt}\par}
+    \vspace{24pt}
+    {\fontsize{32}{39}\selectfont\bfseries\@title\par}
+    \vspace{24pt}
+    {\color{kdp-accent}\rule{\textwidth}{1pt}\par}
+    \vfill
+    {\Large\@author\par}
+    \vspace{12pt}
+    {\@date\par}
+  \end{titlepage}
+  \hypersetup{pageanchor=true}}
+\makeatother

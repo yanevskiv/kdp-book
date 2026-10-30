@@ -43,7 +43,7 @@ The first chapter explores various spinlock algorithms
  6. Bakery algorithm
  7. CLH algorithm
 
-The rest of the chapters of the book explore the same pr using different synchronization primitives: semaphores, regions, monitors. The following is the structure of each chapter.
+The rest of the chapters of the book explore the same problems using different synchronization primitives: semaphores, regions, monitors. The following is the structure of each chapter.
 
  1. Introduction
  2. Simple synchronization
@@ -82,7 +82,7 @@ int main() {
     for (int i = 0; i < N; i++)
         ta[i] = createThread(thread, i);
     for (int i = 0; i < N; i++)
-        joinThread(threads[i]);
+        join(ta[i]);
     return 0;
 }
 ```

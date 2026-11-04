@@ -1,7 +1,7 @@
 .PHONY: all book figures clean
 
 # Output PDF name
-OUTPUT = build/kdp-book.pdf
+OUTPUT = build/kdp-notes.pdf
 
 # Book metadata, LaTeX preamble and pandoc filter
 METADATA = metadata.yaml

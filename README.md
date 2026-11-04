@@ -1,16 +1,16 @@
 <div align="center">
 
-![KDP Book](src/splash/kdp-book.jpg)
+![KDP Notes](src/splash/kdp-notes.jpg)
 
-**kdp-book: A set of notes on the topic of concurrency, multithreading and distributed programming!**
+**kdp-notes: A set of notes on the topic of concurrency, multithreading and distributed programming!**
 
-[![Read the PDF](https://img.shields.io/badge/Download-PDF-red)](pdf/kdp-book.pdf)
+[![Read the PDF](https://img.shields.io/badge/Download-PDF-red)](pdf/kdp-notes.pdf)
 
 </div>
 
 ---
 
-**kdp-book** is an illustrative booklet on the topic of concurrent programming.  The goal I had with this booklet is to illustrate many of the classic problems in concurrent programming using different synchronization primitives and techniques. The examples largely come from my university notes on the relevant [subject on concurrent programming](https://rti.etf.bg.ac.rs/rti/ir3kdp/index.html).
+**kdp-notes** is an illustrative booklet on the topic of concurrent programming.  The goal I had with this booklet is to illustrate many of the classic problems in concurrent programming using different synchronization primitives and techniques. The examples largely come from my university notes on the relevant [subject on concurrent programming](https://rti.etf.bg.ac.rs/rti/ir3kdp/index.html).
 
 It's written in Markdown and built with pandoc (LuaLaTeX). It's only available in the Serbian language though a translation into other languages is in progress.
 
@@ -22,7 +22,7 @@ Install Pandoc, LuaLaTeX (TeX Live), and the Ubuntu and Ubuntu Mono fonts, then 
 make book
 ```
 
-The result is `build/kdp-book.pdf`. Markdown remains the source: Pandoc uses
+The result is `build/kdp-notes.pdf`. Markdown remains the source: Pandoc uses
 its default LaTeX template, `metadata.yaml` sets the fonts and A4 page layout,
 and `src/preamble.tex` styles the title page, headings, running headers,
 captions, and code listings. `tools/listings.lua` preserves the C++/Java

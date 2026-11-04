@@ -1,6 +1,6 @@
 <div align="center">
 
-![KDP Notes](src/splash/kdp-notes.jpg)
+![KDP Notes](docs/splash/kdp-notes.jpg)
 
 **kdp-notes: A set of notes on the topic of concurrency, multithreading and distributed programming!**
 
